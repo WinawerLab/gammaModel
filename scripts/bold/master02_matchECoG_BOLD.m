@@ -2,8 +2,9 @@
 %
 %
 % This scripts is used to refit fMRI data with the SOC model
-% Not sure how the images were filtered and fitted, consider redoing this
-% for paper
+%
+% !!! Not sure how the images should be filtered and fitted here, should
+% redo for paper
 %
 %
 
