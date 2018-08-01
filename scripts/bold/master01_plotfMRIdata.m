@@ -41,14 +41,15 @@ a = load(fullfile(dataDir,'bold','dataset03_benchmark.mat'));
 vox_plot = 647;
 vox_name = ['v' int2str(vox_plot) 'closetoSub19El109'];
 
-figure('Position',[100 100 600 200]),hold on
+figure('Position',[0 0 1200 160]),hold on
+subplot(1,3,1:2),hold on
 
 % get betas from voxel
 bold_plot = betamn(vox_plot,imnumbers_ecog)';
 bolderr_plot = betase(vox_plot,imnumbers_ecog)';
 
 % plot
-bar(bold_plot,1)
+bar(bold_plot,1,'b','EdgeColor',[0 0 0])
 % plot error
 plot([1:77'; 1:77'],[bold_plot+bolderr_plot bold_plot-bolderr_plot]','k','LineWidth',1);
 

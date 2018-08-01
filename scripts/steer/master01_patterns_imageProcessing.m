@@ -63,7 +63,7 @@ dims            = size(im);
 numLevels       = maxLevel(dims,bandwidth); % calculates nr of spatial frequencies
 
 % Design filters
-[freqRespsImag,freqRespsReal,pind]= ...
+[freqRespsImag,freqRespsReal,pind] = ...
     makeQuadFRs(dims,numLevels,numOrientations,bandwidth); % pind will be size: (numLevels x numOrientations) + 2
 plot_orient = 1;
 plot_level = 1;
@@ -82,10 +82,11 @@ end
 % viewBands(freqRespsReal,pind,1/4,'auto1');
 
 % Run filters through image
-[pyr,pind]=buildQuadBands(im,freqRespsImag,freqRespsReal);
+[pyr,pind] = buildQuadBands(im,freqRespsImag,freqRespsReal);
+% --> size pyr is res*res*numOrientations*numLevels + res*res*2
 clear freqRespsImag freqRespsReal % housekeeping
 % visualine pyr (pyr is complex, visualize real):
-plot_orient = 1;
+plot_orient = 2;
 plot_level = 2;
 displayImage(accessSteerBand(pyr,pind,numOrientations,plot_level,plot_orient));
 % displayImage(pyrLow(pyr,pind));
@@ -174,10 +175,11 @@ for kk = 1:size(stimuli,3)
         makeQuadFRs(dims,numLevels,numOrientations,bandwidth); % pind will be size: (numLevels x numOrientations) + 2
 
     % Run filters through image
-    [pyr,pind]=buildQuadBands(im,freqRespsImag,freqRespsReal);
+    [pyr,pind] = buildQuadBands(im,freqRespsImag,freqRespsReal);
     clear freqRespsImag freqRespsReal % housekeeping
 
-    % Calculate energy from filtered images (pyr):
+    % Calculate energy from filtered images (pyr)
+    % Energies are normalized...
     nEnergies = normEnergies(pyr,pind,numOrientations,0.1);
 
     % Put spatial frequencies/orientations in output imEnergy 

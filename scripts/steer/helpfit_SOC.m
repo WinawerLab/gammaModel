@@ -1,6 +1,7 @@
 function [results,modelfit] = helpfit_SOC(stimulus,params,ecog_vals,seeds)
 %
-% helpfunction to fit or apply the SOC model
+% helpfunction to fit or apply the SOC model from Kay et al., 2013 PLOS
+% Biology
 %
 % inputs
 %       stimulus: the contrast images
@@ -21,8 +22,16 @@ function [results,modelfit] = helpfit_SOC(stimulus,params,ecog_vals,seeds)
 %       results: 
 %       modelfit: model applied to stimulus
 %
-% example:
+% Example 1:
 %       [results,modelfit] = helpfit_SOC(stimulus,params,ecog_vals,seeds)
+%
+% Example 2 for fitting to broadband:
+%       [resultsSpace,modelfitSpace] = helpfit_SOC(imEnergyMean,[],ecog_bb,seeds);
+%
+% Example 3 for running through stimuli:
+%       [resultsSpace,modelfitSpace] = helpfit_SOC(imEnergyMean,params,[],[]);
+%
+% D. Hermes, UMC Utrecht, 2017
 %
 
 results = [];

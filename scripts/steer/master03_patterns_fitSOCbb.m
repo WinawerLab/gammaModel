@@ -34,7 +34,6 @@ clear imEnergy;
 
 %% Load ECoG data and fit
 
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 %%%%% Pick a subject:
 subjects = [19,23,24];
 s = 1; subj = subjects(s);
@@ -121,7 +120,12 @@ for el = 1:length(electrodes)
     boot_SOCR = zeros(size(ecog_bb,2),1);
     boot_SOCfit = zeros(size(ecog_bb,2),size(ecog_bb,1));
     for kk = 1:size(ecog_bb,2) % nr of boots
+        % fit:
         [resultsSpace,modelfitSpace] = helpfit_SOC(imEnergyMean,[],ecog_bb(:,kk),seeds);
+        
+%         % get values from  and get gain:
+%         [resultsSpace,modelfitSpace] = helpfit_SOC(imEnergyMean,params,[],[]);
+%         
         boot_SOCparams(kk,:) = resultsSpace.params;
         boot_SOCR(kk,:) = resultsSpace.trainperformance;
         boot_SOCfit(kk,:) = modelfitSpace;
