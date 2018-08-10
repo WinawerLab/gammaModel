@@ -1,4 +1,4 @@
-
+%
 % Correlate image contrast of patterns filtered with steerable pyramid
 % filters with gamma/broadband power.
 %

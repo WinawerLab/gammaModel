@@ -96,48 +96,17 @@ displayImage(accessSteerBand(pyr,pind,numOrientations,plot_level,plot_orient));
 % Calculate energy from filtered images (pyr):
 nEnergies = normEnergies(pyr,pind,numOrientations,0.1);
 max2(nEnergies)
-% visualize energies:
+
+% Visualize energies:
 % viewBands(nEnergies,pind,1/4,[0 0.8]); % max possible response is 0.8
 % viewBands(nEnergies,pind,1/4,[0 max2(nEnergies)]);
-% plot_orient = 3;
-% plot_level = 3;
-% band = accessSteerBand(nEnergies,pind,numOrientations,plot_level,plot_orient);
-% displayImage(band,[0 0.8]);
+plot_orient = 3;
+plot_level = 3;
+band = accessSteerBand(nEnergies,pind,numOrientations,plot_level,plot_orient);
+displayImage(band);%,[0 max2(nEnergies)]);
 % imStats(band);
 
-% Just sum across spatial frequencies? 
-test_out = zeros(dims(1),dims(2),numOrientations);
-for plot_orient = 1:numOrientations
-    temp_band = zeros(numLevels,dims(1),dims(2));
-    for plot_level = 1:numLevels
-        temp_band(plot_level,:,:) = accessSteerBand(nEnergies,pind,numOrientations,plot_level,plot_orient);
-    end
-    test_out(:,:,plot_orient) = squeeze(sum(temp_band,1));
-    clear temp_band
-end
 
-% Save weighted sum with weights centered at one of 3 levels:
-test_out1 = zeros(dims(1),dims(2),numOrientations); % 2: high sf
-test_out2 = zeros(dims(1),dims(2),numOrientations); % 4: mid sf
-test_out3 = zeros(dims(1),dims(2),numOrientations); % 6: low sf
-
-% Get weights:
-w = window(@gausswin,5);
-w1 = [w(2:5); zeros(3,1)];
-w2 = [0; w; 0];
-w3 = [zeros(3,1); w(1:4)];
-for plot_orient = 1:numOrientations
-    temp_band = zeros(numLevels,dims(1),dims(2));
-    for plot_level = 1:numLevels
-        temp_band(plot_level,:,:) = accessSteerBand(nEnergies,pind,numOrientations,plot_level,plot_orient);
-    end
-    test_out1(:,:,plot_orient) = squeeze(sum(temp_band*w1,1));
-    test_out2(:,:,plot_orient) = squeeze(sum(temp_band*w2,1));
-    test_out3(:,:,plot_orient) = squeeze(sum(temp_band*w3,1));
-    clear temp_band
-end
-
-toc
 
 %% Loop through images and save
 clear all
