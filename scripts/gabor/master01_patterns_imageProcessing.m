@@ -140,7 +140,6 @@ load(fullfile(dataDir,'soc_bids','derivatives','stimuliGaborfilt','task-soc_stim
 %% load ECoG data 
 %%
 
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 %%%%% Pick a subject:
 subjects = [19,23,24];
 s = 1; subj = subjects(s);
@@ -154,28 +153,44 @@ elec = 109;
 % Choose an analysis type:
 % analysisType = 'spectraRERP500';
 % analysisType = 'spectra';
+% analysisType = 'spectra500';
 analysisType = 'spectra200';
 
-% load the data:
-dataFitName = [dataRootPath '/sub-' int2str(subj) '/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat'];
-load(dataFitName,'resamp_parms')
+% % load resamp_parms_even and resamp_parms_odd for even/odd:
+% dataFitName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '_evenodd.mat'];
+% load(dataFitName)
+% load resamp_parms for 100 bootstraps:
+dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+    'ses-01','derivatives','ieeg',...
+    ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+load(dataFitName)
 
 % Broadband estimate, one value per image:
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-ecog_bb = squeeze(median(resamp_parms(:,:,2),2))-bb_base;
-ecog_bb_err=[squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base;
+% log power:
+% ecog_bb = resamp_parms(:,:,2)-bb_base;
+% %%% not working yetecog_bb_err=[squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
+%     squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base;
+% power:
+ecog_bb = 10.^(resamp_parms(:,:,2)-bb_base)-1;
 
-ecog_g = squeeze(median(resamp_parms(:,:,3),2));
-ecog_g_err=[squeeze(quantile(resamp_parms(:,:,3),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,3),.975,2))]';
-
-ecog_a = squeeze(median(resamp_parms(:,:,6),2));
-ecog_a_err=[squeeze(quantile(resamp_parms(:,:,6),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,6),.975,2))]';
+% Gamma power estimate, one value per image:
+% ecog_g = 10.^resamp_parms(:,:,3)-1;
+% %%%% not working yet: ecog_g_err=[squeeze(quantile(resamp_parms(:,:,3),.025,2)) ...
+%     squeeze(quantile(resamp_parms(:,:,3),.975,2))]';
 
 % Pick ECoG values to analyse:
 ecog_vals=ecog_bb;
+
+%%
+%%
+%%
+%%
+%% not updated, old code:
+%%
+%%
+%%
+%%
 
 %% %%% Prepare for model fitting
 
