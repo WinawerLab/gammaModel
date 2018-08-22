@@ -1,4 +1,4 @@
-function [results,modelfit] = helpfit_SOC(stimulus,params,ecog_vals,seeds)
+function [results,modelfit] = helpfit_SOC1(stimulus,params,ecog_vals,seeds)
 %
 % helpfunction to fit or apply the SOC model from Kay et al., 2013 PLOS
 % Biology
@@ -68,7 +68,7 @@ modelfun = @(pp,dd) pp(4)*(socfun(dd,gaufun(pp),restrictrange(pp(6),0,1)).^pp(5)
 % % following bounds for the parameters (see below), we will be using the
 % % Levenberg-Marquardt optimization algorithm, which does not respect
 % % parameter bounds. Define bounds for the model parameters:
-bounds = [1-res+1 1-res+1 0   -Inf 0   0;
+bounds = [NaN NaN 0   -Inf 0   0;
           2*res-1 2*res-1 Inf  Inf Inf 1];
 % % define a version of bounds where we insert NaNs in the first row
 % % in the spots corresponding to the N and C parameters.  this

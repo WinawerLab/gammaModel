@@ -1,4 +1,4 @@
-function [results,modelfit] = helpfit_SOC(stimulus,params,ecog_vals,seeds)
+function [results,modelfit] = helpfit_SOC2(stimulus,params,ecog_vals,seeds)
 %
 % helpfunction to fit or apply the SOC model from Kay et al., 2013 PLOS
 % Biology
@@ -111,7 +111,7 @@ resampling = 0;
 metric = @(a,b) calccod(a,b);
 % metric = @(a,b) calccod(a,b,[],[],0);
 
-if isempty(params) % do the fitting
+if isempty(params) % do the ffitting to estimate the parameters
     % set the fitting inputs:
     opt = struct( ...
       'stimulus',     stimulus, ...
@@ -131,3 +131,7 @@ else % if parameters are there just apply the model with these params
     % return the estimates:
     modelfit = modelfun(params,stimulus);
 end
+
+
+
+
