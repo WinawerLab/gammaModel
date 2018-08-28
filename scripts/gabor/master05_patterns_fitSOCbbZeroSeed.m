@@ -55,13 +55,15 @@ if subj == 9
     im_deg = rad2deg(atan(20.7./61));
 elseif subj == 19
     im_deg = rad2deg(atan(17.9./50));
-    electrodes = [107 108 109 115 120 121]; % S1
+%     electrodes = [107 108 109 115 120 121]; % S1
+    electrodes = [108 109 115 120 121]; % S1
 elseif subj==23
     im_deg = rad2deg(atan(17.9./36));
     % electrodes = [53 54]; % S2
 elseif subj==24
     im_deg = rad2deg(atan(17.9./45));
-    electrodes = [45 46]; % S3
+%     electrodes = [45 46]; % S3
+    electrodes = [46];
 end
 % electrodes = [45];
 
@@ -107,17 +109,6 @@ for el = 1:length(electrodes)
 
     % Get a good gain seed:
     gain_seed = max(mean(ecog_bb,2));
-
-    % Standard SOC parameters for visual areas:
-    if max(v_area)==1
-        seed_params = [xys_pix(1) xys_pix(2) xys_pix(3) gain_seed .18 .93]; 
-    elseif max(v_area)==2
-        seed_params = [xys_pix(1) xys_pix(2) xys_pix(3) gain_seed .13 .99]; 
-    elseif max(v_area)==3
-        seed_params = [xys_pix(1) xys_pix(2) xys_pix(3) gain_seed .12 .99]; 
-    elseif max(v_area)==4
-        seed_params = [xys_pix(1) xys_pix(2) xys_pix(3) gain_seed .115 .95]; 
-    end
         
     % Seeds for fitting n and c
     Ns = [.1 .3 .5 .7 .9 1];
@@ -125,7 +116,7 @@ for el = 1:length(electrodes)
     seeds = [];
     for p = 1:length(Ns)
       for q = 1:length(Cs)
-        seeds = cat(1,seeds,[seed_params(1:4) Ns(p) Cs(q)]);  
+        seeds = cat(1,seeds,[(1+res)/2 (1+res)/2 res/4*sqrt(Ns(p)) gain_seed Ns(p) Cs(q)]);  
       end
     end
         
@@ -139,8 +130,15 @@ for el = 1:length(electrodes)
         % training stimuli (kk is left out)
         trainSet = setdiff([1:size(ecog_bb,1)],kk);
         
+        % calculate decent model for space stimuli  
+        [resultsSpace1] = helpfit_SOC2(...
+            imEnergyMean(trainSet(ismember(trainSet,1:38)),:),[],...
+            mean(ecog_bb(trainSet(ismember(trainSet,1:38)),:),2),seeds);
+        % update seeds with the decent model
+        seeds(:,1:3) = repmat(resultsSpace1.params(1:3),size(seeds,1),1);
+        
         % calculate model
-        [resultsSpace,modelfitSpace] = helpfit_SOC1(...
+        [resultsSpace,modelfitSpace] = helpfit_SOC2(...
             imEnergyMean(trainSet,:),[],...
             mean(ecog_bb(trainSet,:),2),seeds);
         
@@ -148,27 +146,27 @@ for el = 1:length(electrodes)
         cross_SOCparams(kk,:) = resultsSpace.params;
 
         % estimate for the left-out stimulus kk
-        [~,kkEstimate] = helpfit_SOC1(imEnergyMean(kk,:),resultsSpace.params,[],[]);
+        [~,kkEstimate] = helpfit_SOC2(imEnergyMean(kk,:),resultsSpace.params,[],[]);
         cross_SOCestimate(kk) = kkEstimate;
         clear kkEstimate
         
     end
 
     save(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_fitSOCbbpower1']),...
-        'xys_pix','seed_params',...
+        ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_fitSOCbbpower2']),...
+        'xys_pix','seeds',...
         'cross_SOCparams','cross_SOCestimate')
 end
 end
 
-% Maybe exclude last 4 categories for fitting the SOC
+
 
 %% 
 %% Display results for one electrode
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
-s = 1; subj = subjects(s);
+s = 3; subj = subjects(s);
 
 % %%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
@@ -176,15 +174,15 @@ s = 1; subj = subjects(s);
 % electrodes = [45 46]; % S3
 
 analysisType = 'spectra200';
-modelType = 'fitSOCbbpower1';
+modelType = 'fitSOCbbpower2';
 
-elec = 120;
+elec = 46;
 res = 240;
 
 % load model fit
 load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
     ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-    'xys_pix','seed_params',...
+    'xys_pix','seeds',...
     'cross_SOCparams','cross_SOCestimate')
 meanParams = median(cross_SOCparams,1);
 
@@ -241,7 +239,7 @@ print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fi
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
-%%
+%% Figure all subjects
 
 %%%%% Pick a subject:
 subject_ind = [19 19  19  19  19  19  24 24];
@@ -255,7 +253,7 @@ for ll = 1:length(electrodes)
     elec = electrodes(ll);
     
     analysisType = 'spectra200';
-    modelType = 'fitSOCbbpower1';
+    modelType = 'fitSOCbbpower2';
 
     res = 240;
 
@@ -305,7 +303,7 @@ for ll = 1:length(electrodes)
     cross_SOCparams(:,3) = abs(cross_SOCparams(:,3)); % size>0
     medianParams = median(cross_SOCparams);
     % plot median
-%     [~,bbEstimate] = helpfit_SOC1(imEnergyMean,medianParams,[],[]);
+%     [~,bbEstimate] = helpfit_SOC2(imEnergyMean,medianParams,[],[]);
 %     plot(bbEstimate,'r','LineWidth',2)
 
     subplot(4,4,3),hold on
@@ -358,4 +356,5 @@ print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fi
         [analysisType '_allel_' modelType]))
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
         [analysisType '_allel_' modelType]))
+
 
