@@ -12,28 +12,29 @@ function [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
 % data_fit: used to fit weights and gaussian - enter power (not log)
 %
 % output (exp weight_pwr weight_gauss gamma_freq fit_f2)
+% D Hermes, 2015
 
-f_sel=ismember(f,f_use4fit);
-x_base=data_base(f_sel);
-x_in=data_fit(f_sel);
-f_in=f(f_sel);
+f_sel = ismember(f,f_use4fit);
+x_base = data_base(f_sel);
+x_in = data_fit(f_sel);
+f_in = f(f_sel);
 
 % fit exponent to base
-p=polyfit(log10(f_in),log10(x_base)',1);
-out_exp=[-p(1) p(2)];
+p = polyfit(log10(f_in),log10(x_base)',1);
+out_exp = [-p(1) p(2)];
 
 % fit powerlaw and gaussian and plot
-my_options=optimset('Display','off','Algorithm','trust-region-reflective');
-[x]=lsqnonlin(@(x) func_powerBump(x,log10(x_in),log10(f_in'),out_exp(1)),...
+my_options = optimset('Display','off','Algorithm','trust-region-reflective');
+[x] = lsqnonlin(@(x) func_powerBump(x,log10(x_in),log10(f_in'),out_exp(1)),...
     [0 0 log10(40) .05],[-Inf 0 log10(30) .03],[Inf Inf log10(80) .08],...
     my_options);
-bb_amp=x(1);
-gamma_amp=x(2);
-gamma_freq=x(3);
-gamma_width=x(4);
+bb_amp = x(1);
+gamma_amp = x(2);
+gamma_freq = x(3);
+gamma_width = x(4);
 
 % fit to data in log-space
-fit_f2=bb_amp-out_exp(1)*log10(f) + ...
+fit_f2 = bb_amp-out_exp(1)*log10(f) + ...
     gamma_amp*sqrt(2*pi) * normpdf(log10(f),gamma_freq,gamma_width);
 
 %%

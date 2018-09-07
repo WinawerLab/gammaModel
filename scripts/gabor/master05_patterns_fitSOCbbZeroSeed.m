@@ -183,8 +183,7 @@ res = 240;
 load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
     ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
     'xys_pix','seeds',...
-    'cross_SOCparams','cross_SOCestimate')
-meanParams = median(cross_SOCparams,1);
+    'cross_SOCparams','cross_SOCestimate');
 
 % load ecog data:
 dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
@@ -195,7 +194,7 @@ load(dataFitName)
 % ecog power
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
 ecog_bb = mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-ecog_g = 10.^resamp_parms(:,:,3)-1;
+ecog_g = 10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1;
 
 figure('Position',[0 0 1200 160])
 
@@ -204,14 +203,13 @@ ylims = [min(ecog_bb(:)) max([ecog_bb(:); cross_SOCestimate(:)+.1])];
 subplot(1,3,1:2),hold on
 bar(ecog_bb,1,'b','EdgeColor',[0 0 0]);
 plot(cross_SOCestimate' ,'g','LineWidth',2)
-ylim(ylims(1,:))
 title(['elec ' int2str(elec)])
 % plot stimulus cutoffs
 stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
 for k=1:length(stim_change)
     plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
 end
-xlim([0 87])
+xlim([0 87]), ylim(ylims(1,:))
 set(gca,'YTick',[0:1:floor(max(ecog_bb))])
 ylabel('bb')
 
@@ -262,7 +260,6 @@ for ll = 1:length(electrodes)
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'xys_pix','seeds',...
         'cross_SOCparams','cross_SOCestimate')
-    meanParams = median(cross_SOCparams,1);
 
     % load ecog data:
     dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
@@ -277,7 +274,7 @@ for ll = 1:length(electrodes)
         quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.16,2);
     ecog_bb_ypos = quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.84,2)-...
         median(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-    ecog_g = 10.^resamp_parms(:,:,3)-1;
+    ecog_g = 10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1;
 
     ylims = [min(ecog_bb-ecog_bb_yneg) max([ecog_bb+ecog_bb_ypos; cross_SOCestimate(:)+.1])];
 

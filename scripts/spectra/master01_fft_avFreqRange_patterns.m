@@ -4,6 +4,9 @@ addpath('~/Documents/git/ecogBasicCode/')
 addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
 addpath(genpath('/Users/dorahermes-miller/Documents/m-files/knkutils'));
 
+% script to calculate average power change in bb and gamma in frequency
+% ranges without fitting
+
 
 %% load all data together
 %%
@@ -30,6 +33,8 @@ load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','inc
 electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
+
+electrodes = [109]; % S3
 
 for k = 1:length(electrodes)
     elec = electrodes(k);
@@ -85,9 +90,9 @@ for k = 1:length(electrodes)
     subplot(2,1,1),hold on
     text([19 40 46 52 55 61 70 74 79 84],zeros(10,1)-.25,{'space','orie','grat','pl','circ','zcon','sp','zsp','coh','nm'})
     
-    set(gcf,'PaperPositionMode','auto')
-    print('-depsc','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_MeanSpectbb_g_a'])
-    print('-dpng','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_MeanSpectbb_g_a'])
+%     set(gcf,'PaperPositionMode','auto')
+%     print('-depsc','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_MeanSpectbb_g_a'])
+%     print('-dpng','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_MeanSpectbb_g_a'])
 
 end
 

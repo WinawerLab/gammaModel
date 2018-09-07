@@ -1,13 +1,17 @@
-addpath('~/Documents/git/ecogBasicCode/')
-addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
-addpath(genpath('~/Documents/m-files/knkutils'));
+clear all
+
+% set paths:
+gammaModelCodePath;
+dataDir = gammaModelDataPath;
+
+% add other toolboxes:
+addpath('/Users/dora/Documents/git/ecogBasicCode/')
+addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 %%
 %% load all data together
 %%
 
-clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 subjects = [19,23,24];
 s = 3;
 
@@ -20,10 +24,11 @@ analysisType = 'spectra200';
 % analysisType = 'spectraRERP200';
 
 subj = subjects(s);
-dataName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '.mat'];
+dataName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],'ses-01','derivatives','ieeg',...
+    ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '.mat']);
 load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','include_channels')   
 
-%% test fitting parameters in one electrode, one stimulus:
+%% test fitting, in one electrode, many stimuli:
 % channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
 elec = 109;
 
@@ -72,6 +77,59 @@ end
 % set(gcf,'PaperPositionMode','auto')
 % print('-dpng','-r300',['./figures/fit/fit_sub-' int2str(subj) '_el'  int2str(elec)])
 % print('-depsc','-r300',['./figures/fit/fit_sub-' int2str(subj) '_el'  int2str(elec)])
+
+
+%% test fitting, in one electrode, few stimuli:
+% channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
+
+elec = 45;
+
+data_fft = squeeze(spectra(elec,:,:));
+data_fft_off = squeeze(spectra_off(elec,:,:));
+
+f_use4fit = [30:57 65:115 126:175 186:200];
+f_sel = ismember(f,f_use4fit);
+
+figure('Position',[0 0 150 150]),hold on
+stims_plot = [39];
+
+% plot baseline 
+data_base = mean(data_fft_off,1); % baseline
+plot(log10(f),log10(data_base),'k','LineWidth',2)
+plot(log10(f),out_exp(2)-out_exp(1)*log10(f),'k:','LineWidth',2)
+
+for k = 1:length(stims_plot)
+    % get stimulus data
+    data_fit = mean(data_fft(stims==stims_plot(k),:),1); % stimuli
+    
+    % fit stimulus data
+    [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
+        ecog_fitgamma(f,f_use4fit,data_base,data_fit);
+    resamp_parms(k,1) = out_exp(1); % this is the baseline slope
+    resamp_parms(k,2) = bb_amp;
+    resamp_parms(k,3) = gamma_amp; % actual gamma amplitude is gamma_amp./gamma_width
+    resamp_parms(k,4) = gamma_freq;
+    resamp_parms(k,5) = gamma_width;
+    resamp_parms(k,6) = out_exp(2); % this is the baseline intercept
+
+    % plot stimulus data
+    plot(log10(f),log10(data_fit),'Color',[0 .3 .9],'LineWidth',2)
+    plot(log10(f),fit_f2,':','Color',[0 .3 .9],'LineWidth',2)
+end
+
+xlim([log10(30) log10(200)])
+ylim([-1.5 2.1])
+set(gca,'XTick',[log10(25) log10(50) log10(100) log10(200)],...
+    'XTickLabel',{'25','50','100','200'},...
+    'YTick',-2:1:2)
+xlabel('Frequency (Hz)'),ylabel('Log10 power')
+
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
+
 
 %%
 %% Fit gamma/bb for electrodes that we want to analyze 
@@ -138,9 +196,8 @@ for jj = 1:length(electrodes)
     save(dataFitName,'resamp_parms')
 end
 
-%% plot all stimulus conditions in a row
-clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
+
+%% plot BB/G power for all stimulus conditions in a row
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
@@ -161,18 +218,20 @@ analysisType = 'spectra200';
 % analysisType = 'spectra100';
 % analysisType = 'spectraRERP200';
 
-dataFitName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat'];
-
+% load ECoG data:
+dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+    'ses-01','derivatives','ieeg',...
+    ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
 load(dataFitName,'resamp_parms')
 
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-ecog_bb = squeeze(median(resamp_parms(:,:,2),2))-bb_base;
-ecog_bb_err=[squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base;
+ecog_bb = 10.^(squeeze(median(resamp_parms(:,:,2),2))-bb_base)-1;
+ecog_bb_err=10.^([squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
+    squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base)-1;
 
-ecog_g = squeeze(median(resamp_parms(:,:,3),2));
-ecog_g_err=[squeeze(quantile(resamp_parms(:,:,3),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,3),.975,2))]';
+ecog_g = 10.^(squeeze(median(resamp_parms(:,:,3)./resamp_parms(:,:,5),2)))-1;
+ecog_g_err=10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.025,2)) ...
+    squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.975,2))]')-1;
 
 ecog_a = squeeze(median(resamp_parms(:,:,7),2));
 ecog_a_err=[squeeze(quantile(resamp_parms(:,:,7),.025,2)) ...
@@ -212,9 +271,9 @@ for s = 1:2
     xlim([0 87])
 end
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
-print('-dpng','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
+% print('-dpng','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
 
 %%
 %%  Analysis reliability

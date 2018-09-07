@@ -47,8 +47,8 @@ for data_nr = 1:nr_runs
     % data_epoch = ecog_baselinesubtract(data_epoch,t>-.1 & t<0);
 
     %%%% calculate spectra
-    fft_w = window(@hann,100); % window width
-    fft_ov = 50; % overlap
+    fft_w = window(@hann,200); % window width
+    fft_ov = 100; % overlap
     % do not regress ERP here, because regressing out average response with a few trials can hurt 
     reg_erp = 0; % 1 to regress erp out, 0 not to, if yes, make sure to baseline correct first    
     
@@ -81,13 +81,13 @@ for data_nr = 1:nr_runs
 %     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectraRERP500.mat'];
 
     % SETTINGS: fft_w = window(@hann,200), fft_ov = 100, reg_erp = 0, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra200.mat'];
+    saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra200.mat'];
     
     % SETTINGS: fft_w = window(@hann,200), fft_ov = 100, reg_erp = 1, fft_t = t>=0 & t<.5
 %     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectraRERP200.mat'];
 
     % SETTINGS: fft_w = window(@hann,100), fft_ov = 50, reg_erp = 0, fft_t = t>=0 & t<.5
-    saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra100.mat'];
+%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra100.mat'];
 
     % SETTINGS: fft_w = window(@hann,300), fft_ov = 150, reg_erp = 0, fft_t = t>=0 & t<.5
 %     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra300.mat'];
@@ -168,7 +168,7 @@ dataName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' i
 load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','include_channels')   
 
 
-%% plot one channel to check:
+%% plot one channel, all conditions, to check:
 
 % channels to plot (s1: 115 | s2: 53 54 | s3: 45 46):
 electrodes=[109]; 
@@ -203,12 +203,14 @@ for k=1:length(electrodes)
 %     print('-depsc','-r300',['./figures/spectra/' subj '_el'  int2str(electr)])
 %     close all
 end
-%%
+
+%% plot one channel, and select a few conditions, to check:
+
 % channels to plot:
 electrodes = [120];
 
 % stimuli to plot:
-stims_plot = [39:46]; % gratings orientation
+% stims_plot = [39:46]; % gratings orientation
 % stims_plot = [47:50 39]; % gratings contrast
 stims_plot = [11 29]; 
 % stims_plot = [79:82]; 
