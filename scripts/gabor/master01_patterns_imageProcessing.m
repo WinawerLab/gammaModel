@@ -1,5 +1,4 @@
 
-%
 % Filter patterns with gabor patches. Original code was developed by
 % Kendrick Kay (PLOS Computational Biology), Code is used here to filter
 % patterns from ECoG experiments.
@@ -80,11 +79,48 @@ stimulus = applymultiscalegaborfilters(reshape(stimulus,270*270,[])', ...
   filt_prop.cycles,filt_prop.bandwidth,filt_prop.spacings,filt_prop.orientations,...
   filt_prop.phases,filt_prop.thres,filt_prop.scaling,filt_prop.mode);
 
-save(fullfile(dataDir,'soc_bids','derivatives','stimuliGaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+save(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+
+%% figure of images with different orientations
+
+load(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+stimulus = sqrt(blob(stimulus.^2,2,2)); % quadrature pairs
+
+numOrientations = 8;
+
+res = sqrt(size(stimulus,2)/numOrientations);
+
+
+% Now to view an image, one can use:
+inNr = 12;
+thisIm = reshape(stimulus(inNr,:),numOrientations,res,res); 
+
+% Make the figure
+figure('Position',[0 0 1200 300]), 
+
+for kk = 1:numOrientations
+    subplot(1,numOrientations+1,kk)
+    imagesc(squeeze(thisIm(kk,:,:)),[0 max(thisIm(:))])
+    axis square
+    axis off
+end
+colormap gray
+
+% Add lastplot of the mean across orientations
+subplot(1,numOrientations+1,numOrientations+1),imagesc(squeeze(mean(thisIm,1)),[0 max(thisIm(:))/2])
+axis square
+axis off
+title('mean across orientations')
+
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','filteredStimFigure',...
+    ['stimulus-' int2str(inNr) '_filtered_orientations']))
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','filteredStimFigure',...
+    ['stimulus-' int2str(inNr) '_filtered_orientations']))
 
 %% %%%%%% preprocess images - part 3 is fast %%%%%%%%
 
-load(fullfile(dataDir,'soc_bids','derivatives','stimuliGaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+load(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
 
 % compute the square root of the sum of the squares of the outputs of
 % quadrature-phase filter pairs (this is the standard complex-cell energy model).
@@ -112,7 +148,7 @@ clear stimulusPOP;
 
 % sum across orientation.  after this step, stimulus is images x positions.
 stimulus = blob(stimulus,2,8);
-save(fullfile(dataDir,'soc_bids','derivatives','stimuliGaborfilt','task-soc_stimuli_gaborFilt02.mat'),'stimulus')
+save(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt02.mat'),'stimulus')
 
 %%
 % inspect one of the stimuli
@@ -133,7 +169,7 @@ title('Stimulus');
 %%
 %% %%%%%% LOAD preprocessed images  - skip timeconsuming part %%%%%%%%
 %%
-load(fullfile(dataDir,'soc_bids','derivatives','stimuliGaborfilt','task-soc_stimuli_gaborFilt02.mat'),'stimulus')
+load(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt02.mat'),'stimulus')
 
 
 %%

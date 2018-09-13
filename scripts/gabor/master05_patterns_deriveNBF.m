@@ -21,6 +21,7 @@ load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','task-soc_stimuli_gab
 % quadrature-phase filter pairs (this is the standard complex-cell energy model).
 % after this step, stimulus is images x orientations*positions.
 stimulus = sqrt(blob(stimulus.^2,2,2));
+% the square root may not be typical for complex cell energy model
 
 % % compute the population term in the divisive-normalization equation.
 % % this term is simply the average across the complex-cell outputs
@@ -94,8 +95,8 @@ for el = 1:length(electrodes)
     
     % Broadband power estimate, one value per image:
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-    ecog_bb = 10.^(resamp_parms(:,:,2)-bb_base)-1;
-    ecog_g = 10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1;
+    ecog_bb = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
+    ecog_g = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1); % Actual gamma amplitude is parm3/5 width./amplitude
     % ecog_g = resamp_parms(:,:,3)./resamp_parms(:,:,5);
     
     %% Load SOC model results to get x and y and sigma/sqrt(n)
@@ -159,7 +160,7 @@ end
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
-s = 3; subj = subjects(s);
+s = 1; subj = subjects(s);
 
 % %%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
@@ -169,7 +170,7 @@ s = 3; subj = subjects(s);
 analysisType = 'spectra200';
 modelType = 'NBFsimple2';
 
-elec = 46;
+elec = 109;
 res = 240;
 
 % load model fit
@@ -209,7 +210,6 @@ ylabel('gamma')
 % print('-depsc','-r300',['./figures/fit' modelType  '/sub-' int2str(subj) '_' analysisType '_el' int2str(elec)])
 % print('-dpng','-r300',['./figures/fit' modelType  '/sub-' int2str(subj) '_' analysisType '_el' int2str(elec)])
 
-
 %% Display model results for all electrodes
 
 %%%%% Pick a subject:
@@ -242,17 +242,17 @@ for ll = 1:length(electrodes)
 
     % ecog power
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-    ecog_bb = mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-    ecog_bb_yneg = median(10.^(resamp_parms(:,:,2)-bb_base)-1,2)-...
-        quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.16,2);
-    ecog_bb_ypos = quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.84,2)-...
-        median(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
+    ecog_bb = 100*(mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2));
+    ecog_bb_yneg = 100*(median(10.^(resamp_parms(:,:,2)-bb_base)-1,2)-...
+        quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.16,2));
+    ecog_bb_ypos = 100*(quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.84,2)-...
+        median(10.^(resamp_parms(:,:,2)-bb_base)-1,2));
 
-    ecog_g = mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2);
-    ecog_g_yneg = median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2)-...
-        quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.16,2);
-    ecog_g_ypos = quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.84,2)-...
-        median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2);
+    ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
+    ecog_g_yneg = 100*(median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2)-...
+        quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.16,2));
+    ecog_g_ypos = 100*(quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.84,2)-...
+        median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
 %     ecog_g = mean((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2);
 %     ecog_g_yneg = median((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2)-...
 %         quantile((resamp_parms(:,:,3)./resamp_parms(:,:,5)),.16,2);
@@ -260,7 +260,7 @@ for ll = 1:length(electrodes)
 %         median((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2);
 
 
-    ylims = [min(ecog_g(:)) max([ecog_g(:); cross_NBFestimate(:)+.1])];
+    ylims = [min(ecog_g(:)) max([ecog_g(:)+10; cross_NBFestimate(:)+10])];
 
     subplot(8,2,2*ll-1),hold on
 
@@ -282,8 +282,6 @@ print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','de
         [analysisType '_allel_' modelType]))
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
         [analysisType '_allel_' modelType]))
-
-    
     
 %%
 %%

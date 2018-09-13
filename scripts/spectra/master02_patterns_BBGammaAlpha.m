@@ -201,13 +201,13 @@ end
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
-s = 3; subj = subjects(s);
+s = 1; subj = subjects(s);
 
 %%%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
-elec = 46;
+elec = 121;
 
 % Choose an analysis type:
 % analysisType = 'spectra';
@@ -225,55 +225,49 @@ dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
 load(dataFitName,'resamp_parms')
 
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-ecog_bb = 10.^(squeeze(median(resamp_parms(:,:,2),2))-bb_base)-1;
-ecog_bb_err=10.^([squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base)-1;
+ecog_bb = 100*(10.^(squeeze(median(resamp_parms(:,:,2),2))-bb_base)-1);
+ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
+    squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
 
-ecog_g = 10.^(squeeze(median(resamp_parms(:,:,3)./resamp_parms(:,:,5),2)))-1;
-ecog_g_err=10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.975,2))]')-1;
-
-ecog_a = squeeze(median(resamp_parms(:,:,7),2));
-ecog_a_err=[squeeze(quantile(resamp_parms(:,:,7),.025,2)) ...
-    squeeze(quantile(resamp_parms(:,:,7),.975,2))]';
+ecog_g = 100*(10.^(squeeze(median(resamp_parms(:,:,3)./resamp_parms(:,:,5),2)))-1);
+ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
+    squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
 
 figure('Position',[0 0 1000 100])
 
 ylims = [...
     [min(ecog_bb_err(:)) max(ecog_bb_err(:))];...
-    [0 max(ecog_g_err(:))];...
-    [min(ecog_a_err(:)) max(ecog_a_err(:))] ];
+    [0 max(ecog_g_err(:))]];
 
 subplot(1,2,1),hold on
 bar(ecog_bb,1,'b','EdgeColor',[0 0 0]);
 plot([1:86; 1:86],ecog_bb_err,'k');
 ylim(ylims(1,:))
-title(['elec ' int2str(elec)])
+ylabel('bb %change')
 
 subplot(1,2,2),hold on
 bar(ecog_g,1,'b','EdgeColor',[0 0 0]);
 plot([1:86; 1:86],ecog_g_err,'k');
 ylim(ylims(2,:))
+ylabel('gamma %change')
 
-% subplot(3,1,3),hold on
-% bar(ecog_a,1,'b','EdgeColor',[0 0 0]);
-% plot([1:86; 1:86],ecog_a_err,'k');
-% ylim(ylims(3,:))
-
-for s = 1:2
-    subplot(1,2,s),hold on
+for kk = 1:2
+    subplot(1,2,kk),hold on
     % plot stimulus cutoffs
-    stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
-    for k=1:length(stim_change)
-        plot([stim_change(k) stim_change(k)],ylims(s,:),'Color',[.5 .5 .5],'LineWidth',2)
+    stim_change = [38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
+    for mm = 1:length(stim_change)
+        plot([stim_change(mm) stim_change(mm)],ylims(kk,:),'Color',[.5 .5 .5],'LineWidth',2)
     end
-    text([19 40 46 52 55 61 70 74 79 84],zeros(10,1)-.25,{'space','orie','grat','pl','circ','zcon','sp','zsp','coh','nm'})
+    % text([19 40 46 52 55 61 70 74 79 84],zeros(10,1)+ylims(s,2)+ylims(s,2)./10,{'space','orie','grat','pl','circ','zcon','sp','zsp','coh','nm'})
     xlim([0 87])
+    title(['elec ' int2str(elec)])
 end
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
-% print('-dpng','-r300',['./figures/sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_bb_g_a'])
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+        ['BbGammaPC_' analysisType '_sub' int2str(s) '_elec' int2str(elec)]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+        ['BbGammaPC_' analysisType '_sub' int2str(s) '_elec' int2str(elec)]))
 
 %%
 %%  Analysis reliability
