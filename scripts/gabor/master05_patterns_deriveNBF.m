@@ -74,10 +74,11 @@ for el = 1:length(electrodes)
     elec = electrodes(el);
 
     [v_area,xys,roi_labels] = subj_prf_info(subj,elec);
-    % Convert xys from degrees to pixels
+    
+    % Convert xys from degrees to pixels:
     xys_pix = [res./2 res./2 0] + res.*(xys./im_deg);
     xys_pix(1:2) = [res-xys_pix(2) xys_pix(1)]; % make sure that it matches images 
-    
+    % Derive pRF size from eccentricity:
     [prf_s] = xy2prfsize(xys,v_area);
     prf_s_pix = res.*(prf_s./im_deg);
     
@@ -87,19 +88,18 @@ for el = 1:length(electrodes)
 %     analysisType = 'spectra500';
     analysisType = 'spectra200';
     
-    % load ECoG data:
+    % Load ECoG data:
     dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
     
-    % Broadband power estimate, one value per image:
+    % Gamma power percent signal change per stimulus:
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
     ecog_bb = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
     ecog_g = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1); % Actual gamma amplitude is parm3/5 width./amplitude
-    % ecog_g = resamp_parms(:,:,3)./resamp_parms(:,:,5);
     
-    %% Load SOC model results to get x and y and sigma/sqrt(n)
+    %% Load SOC model results to get x and y (and sigma/sqrt(n))
     
     modelType = 'fitSOCbbpower2';
     load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
@@ -114,18 +114,20 @@ for el = 1:length(electrodes)
     
     %% Fit gamma model.
 
-    % run through sizes and fit gains:
-    prf_sizes = 1;%.5:.5:5; % factor to multiply prf size
+    % Factor to multiply prf size
+    prf_sizes = 1;%.5:.5:5; % 
 
     % Initalize outputs:
     cross_NBFparams = zeros(size(ecog_bb,1),4,length(prf_sizes));
     cross_NBFestimate = zeros(size(ecog_bb,1),1,length(prf_sizes));
     
-    % Estimate gain, leave one out every time for cross validation
+    % Set the seed parameters:
+    %use sigma./sqrt(n) for size
     % seed_params = [medianParams(1:2) medianParams(3)./sqrt(medianParams(5)) 1];
-
+    % derive size from eccentricity
     seed_params = [medianParams(1:2) prf_s_pix 1];    
-
+    
+    % Estimate gain, leave one out every time for cross validation
     for kk = 1:size(ecog_bb,1) % number of stimuli, leave out kk   
         % training stimuli (kk is left out)
         trainSet = setdiff([1:size(ecog_bb,1)],kk);
@@ -160,7 +162,7 @@ end
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
-s = 1; subj = subjects(s);
+s = 3; subj = subjects(s);
 
 % %%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
@@ -170,8 +172,8 @@ s = 1; subj = subjects(s);
 analysisType = 'spectra200';
 modelType = 'NBFsimple2';
 
-elec = 109;
-res = 240;
+elec = 46;
+res = sqrt(size(stimulus,2)/8);
 
 % load model fit
 load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
@@ -187,16 +189,19 @@ load(dataFitName)
 
 % ecog power
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-ecog_bb = mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-ecog_g = mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2);
+ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
+ecog_g = mean(100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1),2);
+ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
+    squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
 
-ylims = [min(ecog_g(:)) max([ecog_g(:); cross_NBFestimate(:)+.1])];
+ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
 
-figure('Position',[0 0 1200 160])
+figure('Position',[0 0 1000 100])
 
-subplot(1,3,1:2),hold on
-bar(ecog_g,1,'b','EdgeColor',[0 0 0]);
-plot(cross_NBFestimate' ,'g','LineWidth',2)
+subplot(1,2,1),hold on
+bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+plot([1:86; 1:86],ecog_g_err,'k');
+plot(cross_NBFestimate' ,'r','LineWidth',2)
 % plot stimulus cutoffs
 stim_change = [38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
 for k = 1:length(stim_change)
@@ -206,9 +211,11 @@ xlim([0 87]), ylim(ylims(1,:))
 set(gca,'XTick',[1:86],'XTickLabel',[],'YTick',[0:ceil(max(ecog_g(:))/4):max(ecog_g(:))])
 ylabel('gamma')
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',['./figures/fit' modelType  '/sub-' int2str(subj) '_' analysisType '_el' int2str(elec)])
-% print('-dpng','-r300',['./figures/fit' modelType  '/sub-' int2str(subj) '_' analysisType '_el' int2str(elec)])
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
 %% Display model results for all electrodes
 
@@ -226,288 +233,204 @@ for ll = 1:length(electrodes)
     analysisType = 'spectra200';
     modelType = 'NBFsimple2';
 
-    res = 240;
+    res = sqrt(size(stimulus,2)/8);
 
-    % load model fit
+    % Load model fit:
     load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
             'xys_pix','seed_params','prf_sizes',...
             'cross_NBFparams','cross_NBFestimate')
 
-    % load ecog data:
+    % Load ecog data:
     dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
-    % ecog power
-    bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-    ecog_bb = 100*(mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2));
-    ecog_bb_yneg = 100*(median(10.^(resamp_parms(:,:,2)-bb_base)-1,2)-...
-        quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.16,2));
-    ecog_bb_ypos = 100*(quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.84,2)-...
-        median(10.^(resamp_parms(:,:,2)-bb_base)-1,2));
-
+    % Gamma power percent signal change:
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
-    ecog_g_yneg = 100*(median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2)-...
-        quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.16,2));
-    ecog_g_ypos = 100*(quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,.84,2)-...
-        median(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
-%     ecog_g = mean((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2);
-%     ecog_g_yneg = median((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2)-...
-%         quantile((resamp_parms(:,:,3)./resamp_parms(:,:,5)),.16,2);
-%     ecog_g_ypos = quantile(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5)),.84,2)-...
-%         median((resamp_parms(:,:,3)./resamp_parms(:,:,5)),2);
+    ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
+        squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
 
-
-    ylims = [min(ecog_g(:)) max([ecog_g(:)+10; cross_NBFestimate(:)+10])];
+    ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
 
     subplot(8,2,2*ll-1),hold on
 
-    bar(ecog_g,1,'b','EdgeColor',[0 0 0]);
-    plot(cross_NBFestimate' ,'g','LineWidth',2)
-    % plot stimulus cutoffs
+    bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    plot([1:86; 1:86],ecog_g_err,'k');
+    plot(cross_NBFestimate','r','LineWidth',2)
+    % Plot stimulus cutoffs:
     stim_change = [38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
     for k = 1:length(stim_change)
         plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
     end
     xlim([0 87]), ylim(ylims(1,:))
-    set(gca,'XTick',[1:86],'XTickLabel',[],'YTick',[0:ceil(max(ecog_g(:))/4):max(ecog_g(:))])
+    set(gca,'XTick',[1:86],'XTickLabel',[])
     ylabel('gamma')
 
+     %%% LOOK AT WHERE THE GAUSSIAN IS
+    subplot(8,4,4*ll-1)
+    [~,xx,yy] = makegaussian2d(res,2,2,2,2);
+    imagesc(ones(size(xx)),[0 1]);
+    axis image, hold on, colormap gray
+    plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
+    %%% plot prf from bar/CSS model
+    % gau = makegaussian2d(res,xys_pix(1),xys_pix(2),xys_pix(3),xys_pix(3),xx,yy,0,0);
+    % imagesc(gau);
+    % axis image, hold on, colorbar
+    % look at the prf from the SOC fit:
+    numPoints = 50;
+    c.th = linspace(0,2*pi, numPoints);
+    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
+    plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    
+end
+
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+%         [analysisType '_allel_' modelType]))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+%         [analysisType '_allel_' modelType]))
+    
+%%
+%% Plot model performance
+
+%%%%% Loop over electrodes and subjects:
+subject_ind = [19 19  19  19  19  19  24 24];
+electrodes = [107 108 109 115 120 121 45 46];
+
+% COD output size electrodes X 2
+% column 1: mean subtracted COD
+% column 2: no mean subtracted COD
+nbf_cod = zeros(length(electrodes),2); 
+
+% Loop to get COD for all electrodes:
+for ll = 1:length(electrodes)
+    
+    subj = subject_ind(ll);
+    elec = electrodes(ll);
+
+    analysisType = 'spectra200';
+    modelType = 'NBFsimple2';
+
+    res = sqrt(size(stimulus,2)/8);
+
+    % Load model fit:
+    load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+            ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
+            'xys_pix','seed_params','prf_sizes',...
+            'cross_NBFparams','cross_NBFestimate')
+
+    % Load ecog data:
+    dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+        'ses-01','derivatives','ieeg',...
+        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+    load(dataFitName)
+
+    % Gamma power percent signal change:
+    ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
+    
+    % Calculate leave-one-out coefficient of determination
+    % mean subtracted:
+    nbf_cod(ll,1) = calccod(cross_NBFestimate,ecog_g,[],0,1); 
+    % no mean subtracted:
+    nbf_cod(ll,2) = calccod(cross_NBFestimate,ecog_g,[],0,0); 
+end
+
+figure('Position',[0 0 200 300]),hold on
+bar(1,mean(nbf_cod(:,1)),'w')
+plot(.9+(1:length(electrodes))/50,nbf_cod(:,1),'k.')
+
+bar(2,mean(nbf_cod(:,2)),'w')
+plot(1.9+(1:length(electrodes))/50,nbf_cod(:,2),'k.')
+
+set(gca,'XTick',[1 2],'XTickLabel',{'COD -mean','COD'})
+
+xlim([0 3]),ylim([0 100])
+
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        ['NBF_CODcross_' analysisType '_allel_' modelType]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        ['NBF_CODcross_' analysisType '_allel_' modelType]))
+
+    
+%%
+%% Plot orientation pRF versus gamma for orientation
+
+%%%%% Loop over electrodes and subjects:
+subject_ind = [19 19  19  19  19  19  24 24];
+electrodes = [107 108 109 115 120 121 45 46];
+
+figure('Position',[0 0 600 800])
+    
+for ll = 1:length(electrodes)
+    
+    subj = subject_ind(ll);
+    elec = electrodes(ll);
+
+    analysisType = 'spectra200';
+    modelType = 'NBFsimple2';
+
+    res = sqrt(size(stimulus,2)/8);
+
+    % Load model fit:
+    load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+            ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
+            'xys_pix','seed_params','prf_sizes',...
+            'cross_NBFparams','cross_NBFestimate')
+
+    % Load ecog data:
+    dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+        'ses-01','derivatives','ieeg',...
+        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+    load(dataFitName)
+
+    % Gamma power percent signal change:
+    ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
+    ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
+        squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
+
+    ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
+
+    subplot(8,3,3*ll-2),hold on
+
+    bar([39:46],ecog_g(39:46),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    plot([39:46; 39:46],ecog_g_err(:,39:46),'k');
+
+    xlim([38 47]), ylim(ylims(1,:))
+    set(gca,'XTick',[39:46])
+    ylabel('gamma')
+
+    %%% LOOK AT WHERE THE GAUSSIAN IS
+    subplot(8,3,3*ll-1)
+    [~,xx,yy] = makegaussian2d(res,2,2,2,2);
+    imagesc(ones(size(xx)),[0 1]);
+    axis image, hold on, colormap gray
+    plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
+    % look at the prf from the SOC fit:
+    numPoints = 50;
+    c.th = linspace(0,2*pi, numPoints);
+    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
+    plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    
+    subplot(8,3,3*ll),hold on
+    degreesPerStimulus = [0:180/8:180]; % degrees from horizontal for 39:46
+    degreesPerStimulus = degreesPerStimulus(1:end-1);
+    
+    bar(degreesPerStimulus,ones(size(degreesPerStimulus)),'w')
+    
+    % degrees from horizontal:
+    prf_deg = atan2d(seed_params(1)-res/2,seed_params(2)-res/2);
+    if prf_deg<0
+        prf_deg = -prf_deg;
+    end
+    plot(prf_deg,0,'ro')
+    xlim([-30 180])
 end
 
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-        [analysisType '_allel_' modelType]))
+        ['PrfAngle_' analysisType '_allel_' modelType]))
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-        [analysisType '_allel_' modelType]))
-    
-%%
-%%
-%% OLD code
-%%
-%%
-%%
-figure('Position',[0 0 1000 200]),
-stims_plot = 74:78;
-for s = 1:length(stims_plot)
-    subplot(1,length(stims_plot),s)
-    imagesc(reshape(imEnergyMean(stims_plot(s),:),res,res))
-    hold on
-    plot(results.params(2),results.params(1),'k.','MarkerSize',10)
-    title(['stim ' int2str(stims_plot(s)) ' prf location el ' int2str(elec)])
-    axis image
-end
-
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',['./figures/sub-' int2str(subj) '_exampleSpace_el' int2str(elec)])
-% print('-dpng','-r300',['./figures/sub-' int2str(subj) '_exampleSpace_el' int2str(elec)]
-
-
-%% Display NBF model results for all electrodes
-
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
-%%%%% Pick a subject:
-subjects = [19,23,24];
-s_nrs = [1 3];
-
-% electrodes
-electrodes = {[107 108 109 115 120 121],[53 54],[45 46]}; % S1, S2, S3
-nr_els = 0;
-for kk = s_nrs
-    nr_els = nr_els + length(electrodes{kk});
-end
-el_colors = jet(nr_els);
-
-analysisType = 'spectra200';
-modelType = 'NBFsimple';
-res = 240;
-nrOrientations = 8;
-
-figure('Position',[0 0 1200 800])
-el_nr = 0;
-for s = 1:length(s_nrs)
-    subj = subjects(s_nrs(s));
-    if subj == 9
-        im_deg = rad2deg(atan(20.7./61));
-    elseif subj == 19
-        im_deg = rad2deg(atan(17.9./50));
-    elseif subj==23
-        im_deg = rad2deg(atan(17.9./36));
-    elseif subj==24
-        im_deg = rad2deg(atan(17.9./45));
-    end
-
-    for el = 1:length(electrodes{s_nrs(s)})
-        el_nr = el_nr+1;
-        elec = electrodes{s_nrs(s)}(el);
-        
-        [v_area,xys,roi_labels] = subj_prf_info(subj,elec);
-        % Convert xys from degrees to pixels
-        xys_pix = [res./2 res./2 0] + res.*(xys./im_deg);
-        xys_pix(1:2) = [res-xys_pix(2) xys_pix(1)]; % make sure that it matches images
-
-        if xys(3)<0.50 % small pRF size
-            imEnergy = sum(imEnergy_orig(:,:,1),3);
-        elseif xys(3)>=0.50 && xys(3)< 0.9 
-           imEnergy = sum(imEnergy_orig(:,:,1),3);
-        elseif xys(3)>=0.9 && xys(3)< 1.7 
-           imEnergy = sum(imEnergy_orig(:,:,1:2),3);
-        elseif xys(3)>=1.7 % 1.73 is the largest we currently have in s19 and s24
-           imEnergy = sum(imEnergy_orig(:,:,1:2),3);
-        end
-        
-        % load model fit
-        load(['./data/model_output/sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType])       
-        cm = jet(size(prf_sizes,2));
-        
-        % load ecog data:
-        dataFitName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '_evenodd.mat'];
-        load(dataFitName)
-        % Test models on odd
-        resamp_parms = resamp_parms_odd;
-        bb_base = resamp_parms(1,6); % from the baseline is the same for resamp_parms(:,:,6)
-        ecog_bb = resamp_parms(:,2)-bb_base;
-        ecog_g = resamp_parms(:,3);
-
-        subplot(nr_els,4,4*el_nr-3:4*el_nr-2),hold on % prf locations 
-        
-        bar(ecog_g,1,'FaceColor',[.5 .5 .5],'EdgeColor',[0 0 0]);
-        
-        % all fits:
-        for kk = 1:size(prf_sizes,2)
-            plot(NBF_modelfit(kk,:),'Color',cm(kk,:),'LineWidth',1) 
-        end
-        ylim([min([ecog_g(:); NBF_modelfit(:)]) max([ecog_g(:); NBF_modelfit(:)])]);
-        
-        % plot stimulus cutoffs
-        stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
-        for k=1:length(stim_change)
-            plot([stim_change(k) stim_change(k)],[min([ecog_g(:); NBF_modelfit(:)]) max([ecog_g(:); NBF_modelfit(:)])],...
-                'Color',[0 0 0],'LineWidth',2)
-        end
-        xlim([0 87])
-        set(gca,'YTick',[0:.2:1],'XTick',[])
-        ylabel(['g el ' int2str(elec)])
-    end
-end
-
-% prf locations 
-
-el_nr = 0;
-for s = 1:length(s_nrs)
-    subj = subjects(s_nrs(s));
-
-    for el = 1:length(electrodes{s_nrs(s)})
-        el_nr = el_nr+1;
-        elec = electrodes{s_nrs(s)}(el);
-
-        % load model fit
-        load(['./data/model_output/sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType])
-
-        subplot(nr_els,4,4*el_nr-1),hold on % prf locations 
-        plot([res/2 res/2],[0 res],'k')
-        plot([0 res],[res/2 res/2],'k')
-
-        % look at the prf from the SOC fit:
-        numPoints = 50;
-        c.th = linspace(0,2*pi, numPoints);
-        for kk = 1:size(NBF_params,1)
-            [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*NBF_params(kk,3));
-            plot(c.x + NBF_params(kk,2), c.y + NBF_params(kk,1),...
-                'Color',cm(kk,:)) % this is just reversed because plot and imagesc are opposite, checked this with contour
-        end
-
-        xlim([0 res+1]),ylim([0 res+1])
-%         set(gca,'XTick',[.25*res .5*res .75*res],'XTickLabel',{'10','0','10'},...
-%             'YTick',[.25*res .5*res .75*res],'YTickLabel',{'10','0','10'},...
-%             'Ydir','reverse')
-        set(gca,'XTick',[.25*res .5*res .75*res],'XTickLabel',[],...
-            'YTick',[.25*res .5*res .75*res],'YTickLabel',[],...
-            'Ydir','reverse')
-        axis square
-    end
-end
- 
-% parameters 
-r_crossval = zeros(nr_els,size(prf_sizes,2),3);
-
-el_nr = 0;
-for s = 1:length(s_nrs)
-    subj = subjects(s_nrs(s));
-
-    for el = 1:length(electrodes{s_nrs(s)})
-        el_nr = el_nr+1;
-        elec = electrodes{s_nrs(s)}(el);
-
-        % load model fit
-        load(['./data/model_output/sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType])
-        
-        r_crossval(el_nr,:,:) = NBF_R;
-        
-        subplot(nr_els,4,4*el_nr),hold on % prf locations 
-        plot(prf_sizes,NBF_R(:,1)./100,'Color',[.7 .7 .7])
-        for kk = 1:size(prf_sizes,2)
-%             bar(prf_sizes(kk),NBF_R(kk,1),'FaceColor',cm(kk,:))
-            plot(prf_sizes(kk),NBF_R(kk,1)./100,'.','Color',cm(kk,:))
-        end
-        
-        plot(prf_sizes,NBF_R(:,2)./100,'Color',[.7 .7 .7])
-        for kk = 1:size(prf_sizes,2)
-%             bar(prf_sizes(kk),NBF_R(kk,2),'FaceColor',cm(kk,:))
-            plot(prf_sizes(kk),NBF_R(kk,2)./100,'*','Color',cm(kk,:))
-        end       
-
-        plot(prf_sizes,NBF_R(:,3),'Color',[.7 .7 .7])
-        for kk = 1:size(prf_sizes,2)
-%             bar(prf_sizes(kk),NBF_R(kk,3),'FaceColor',cm(kk,:))
-            plot(prf_sizes(kk),NBF_R(kk,3),'o','Color',cm(kk,:))
-        end
-        ylim([0 1])
-        xlim([0 max(prf_sizes)+.5])
-        set(gca,'XTick',prf_sizes)
-        ylabel('R or r^2')
-
-    end
-end
-
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',['./figures/fit' modelType  '/allsub_' analysisType])
-print('-dpng','-r300',['./figures/fit' modelType  '/allsub_' analysisType])
-
-%%
-% r_crossval
-figure('Position',[0 0 250 500])
-subplot(3,1,1),hold on
-for kk = 1:size(prf_sizes,2)
-    bar(prf_sizes(kk),squeeze(mean(r_crossval(:,kk,1),1)),.4,'FaceColor',[1 1 1],'EdgeColor',cm(kk,:))
-    plot(prf_sizes(kk),squeeze(r_crossval(:,kk,1)),'.','Color',cm(kk,:))
-end
-ylabel('R')
-ylim([0 100]),xlim([0 max(prf_sizes)+.5])
-set(gca,'XTick',prf_sizes)
-
-subplot(3,1,2),hold on
-for kk = 1:size(prf_sizes,2)
-    bar(prf_sizes(kk),squeeze(mean(r_crossval(:,kk,2),1)),.4,'FaceColor',[1 1 1],'EdgeColor',cm(kk,:))
-    plot(prf_sizes(kk),squeeze(r_crossval(:,kk,2)),'.','Color',cm(kk,:))
-end
-ylabel('R, mean subtracted')
-ylim([0 100]),xlim([0 max(prf_sizes)+.5])
-set(gca,'XTick',prf_sizes)
-
-subplot(3,1,3),hold on
-for kk = 1:size(prf_sizes,2)
-    bar(prf_sizes(kk),squeeze(mean(r_crossval(:,kk,3),1)),.4,'FaceColor',[1 1 1],'EdgeColor',cm(kk,:))
-    plot(prf_sizes(kk),squeeze(r_crossval(:,kk,3)),'.','Color',cm(kk,:))
-end
-ylabel('Pearson r^2')
-ylim([0 1]),xlim([0 max(prf_sizes)+.5])
-set(gca,'XTick',prf_sizes)
-xlabel('pRF size (x SOC pRF fit)')
-
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',['./figures/fit' modelType  '/allsub_' analysisType '_Rs'])
-print('-dpng','-r300',['./figures/fit' modelType  '/allsub_' analysisType '_Rs'])
-
+        ['PrfAngle_' analysisType '_allel_' modelType]))

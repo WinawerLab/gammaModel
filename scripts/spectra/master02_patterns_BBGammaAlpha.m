@@ -13,7 +13,7 @@ addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 %%
 
 subjects = [19,23,24];
-s = 3;
+s = 1;
 
 % analysisType = 'spectra';
 % analysisType = 'spectraRERP';
@@ -207,7 +207,7 @@ s = 1; subj = subjects(s);
 % electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
-elec = 121;
+elec = 109;
 
 % Choose an analysis type:
 % analysisType = 'spectra';

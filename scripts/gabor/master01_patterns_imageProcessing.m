@@ -14,7 +14,6 @@ dataDir = gammaModelDataPath;
 addpath('~/Documents/git/ecogBasicCode/')
 addpath(genpath('~/Documents/m-files/knkutils'));
 
-
 %%
 %% %%%%%% START preprocess images %%%%%%%%
 %%

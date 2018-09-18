@@ -6,8 +6,8 @@
 % 3. Spatial summation across a population receptive field.
 % 4. Standard deviation across orientation.
 %
-% The original code to get complex cell enery was developed by Kendrick Kay
-% (PLOS Computational Biology, 2013).
+% The original code to get complex cell energy was developed by Kendrick
+% Kay (PLOS Computational Biology, 2013).
 %
 % Dora Hermes, UMC Utrecht, 2018.
 

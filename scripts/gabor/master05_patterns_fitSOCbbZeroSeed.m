@@ -55,17 +55,15 @@ if subj == 9
     im_deg = rad2deg(atan(20.7./61));
 elseif subj == 19
     im_deg = rad2deg(atan(17.9./50));
-%     electrodes = [107 108 109 115 120 121]; % S1
-    electrodes = [108 109 115 120 121]; % S1
+    electrodes = [107 108 109 115 120 121]; % S1
 elseif subj==23
     im_deg = rad2deg(atan(17.9./36));
     % electrodes = [53 54]; % S2
 elseif subj==24
     im_deg = rad2deg(atan(17.9./45));
-%     electrodes = [45 46]; % S3
-    electrodes = [46];
+    electrodes = [45 46]; % S3
 end
-% electrodes = [45];
+% electrodes = [107];
 
 res = sqrt(size(imEnergyMean,2));  % resolution of the pre-processed stimuli
 
@@ -92,11 +90,9 @@ for el = 1:length(electrodes)
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
     
-    % Broadband estimate, one value per image:
-    bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-    ecog_bb = 10.^(resamp_parms(:,:,2)-bb_base)-1;
-%     ecog_bb = resamp_parms(:,:,2)-bb_base;
-    % ecog_g = 10.^resamp_parms(:,:,3)-1;
+    % Broadband power perecent signal change, one value per image:
+    bb_base = resamp_parms(1,1,6); % The baseline is the same for resamp_parms(:,:,6)
+    ecog_bb = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
     
     %% Fit SOC model on bb to confirm prf location?
 
@@ -160,13 +156,12 @@ end
 end
 
 
-
 %% 
 %% Display results for one electrode
 
 %%%%% Pick a subject:
 subjects = [19,23,24];
-s = 3; subj = subjects(s);
+s = 1; subj = subjects(s);
 
 % %%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
@@ -176,8 +171,8 @@ s = 3; subj = subjects(s);
 analysisType = 'spectra200';
 modelType = 'fitSOCbbpower2';
 
-elec = 46;
-res = 240;
+elec = 109;
+res = sqrt(size(imEnergyMean,2));
 
 % load model fit
 load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
@@ -193,16 +188,20 @@ load(dataFitName)
 
 % ecog power
 bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-ecog_bb = mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-ecog_g = 10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1;
+ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
+% ecog_bb = 100*(10.^(squeeze(median(resamp_parms(:,:,2),2))-bb_base)-1);
+ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
+    squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
 
-figure('Position',[0 0 1200 160])
+figure('Position',[0 0 1000 100])
 
-ylims = [min(ecog_bb(:)) max([ecog_bb(:); cross_SOCestimate(:)+.1])];
+ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
 
-subplot(1,3,1:2),hold on
-bar(ecog_bb,1,'b','EdgeColor',[0 0 0]);
-plot(cross_SOCestimate' ,'g','LineWidth',2)
+subplot(1,2,1),hold on
+bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+plot([1:86; 1:86],ecog_bb_err,'k');
+
+plot(cross_SOCestimate' ,'r','LineWidth',2)
 title(['elec ' int2str(elec)])
 % plot stimulus cutoffs
 stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
@@ -210,7 +209,7 @@ for k=1:length(stim_change)
     plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
 end
 xlim([0 87]), ylim(ylims(1,:))
-set(gca,'YTick',[0:1:floor(max(ecog_bb))])
+% set(gca,'YTick',[0:floor(max(ecog_bb)/4):floor(max(ecog_bb))])
 ylabel('bb')
 
 subplot(1,3,3)
@@ -231,11 +230,11 @@ for kk = 1:size(cross_SOCparams,1)
 end
 title('bar pRF (color) and SOC pRF (black)')
  
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
 %% Figure all subjects
 
@@ -253,7 +252,7 @@ for ll = 1:length(electrodes)
     analysisType = 'spectra200';
     modelType = 'fitSOCbbpower2';
 
-    res = 240;
+    res = sqrt(size(imEnergyMean,2));
 
     % load model fit
     load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
@@ -267,32 +266,45 @@ for ll = 1:length(electrodes)
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
-    % ecog power
+    % get ecog power percent signal change
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-    ecog_bb = mean(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-    ecog_bb_yneg = median(10.^(resamp_parms(:,:,2)-bb_base)-1,2)-...
-        quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.16,2);
-    ecog_bb_ypos = quantile(10.^(resamp_parms(:,:,2)-bb_base)-1,.84,2)-...
-        median(10.^(resamp_parms(:,:,2)-bb_base)-1,2);
-    ecog_g = 10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1;
-
-    ylims = [min(ecog_bb-ecog_bb_yneg) max([ecog_bb+ecog_bb_ypos; cross_SOCestimate(:)+.1])];
-
-    subplot(8,2,2*ll-1),hold on
-    bar(ecog_bb,1,'b','EdgeColor',[0 0 0]);
-%     errorbar([1:length(ecog_bb)],ecog_bb,ecog_bb_yneg,ecog_bb_ypos,'k')
-    plot(cross_SOCestimate' ,'g','LineWidth',2)
-    ylim(ylims(1,:))
+    ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
+    ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
+        squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
     
+    %%% PLOT BROADBAND POWER AND SOC FIT
+    subplot(8,2,2*ll-1),hold on
+    bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    plot([1:86; 1:86],ecog_bb_err,'k');
+    plot(cross_SOCestimate' ,'r','LineWidth',2)
+    % set ylim
+    ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
+    ylim(ylims(1,:))
     % plot stimulus cutoffs
     stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
     for k = 1:length(stim_change)
         plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
     end
     xlim([0 87])
-    set(gca,'XTick',stim_change,'XTickLabel',[],...
-        'YTick',[0:2:floor(max(ecog_bb))])
     ylabel(['bb el ' int2str(elec)])
+
+    %%% LOOK AT WHERE THE GAUSSIAN IS
+    subplot(8,4,4*ll-1)
+    [~,xx,yy] = makegaussian2d(res,2,2,2,2);
+    imagesc(ones(size(xx)),[0 1]);
+    axis image, hold on, colormap gray
+    plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
+    %%% plot prf from bar/CSS model
+    % gau = makegaussian2d(res,xys_pix(1),xys_pix(2),xys_pix(3),xys_pix(3),xx,yy,0,0);
+    % imagesc(gau);
+    % axis image, hold on, colorbar
+    % look at the prf from the SOC fit:
+    numPoints = 50;
+    c.th = linspace(0,2*pi, numPoints);
+    for kk = 1:size(cross_SOCparams,1)
+        [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*cross_SOCparams(kk,3)./sqrt(cross_SOCparams(kk,5)));
+        plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    end
 
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
@@ -303,7 +315,7 @@ for ll = 1:length(electrodes)
 %     [~,bbEstimate] = helpfit_SOC2(imEnergyMean,medianParams,[],[]);
 %     plot(bbEstimate,'r','LineWidth',2)
 
-    subplot(4,4,3),hold on
+    subplot(8,4,4),hold on
     bar(ll,median(cross_SOCparams(:,5)),'w')
 %     plot(ll,cross_SOCparams(:,5),'k.')
     % 68% ci  ~ 1sd
@@ -311,7 +323,7 @@ for ll = 1:length(electrodes)
         median(cross_SOCparams(:,5))-quantile(cross_SOCparams(:,5),.16),...
         quantile(cross_SOCparams(:,5),.84)-median(cross_SOCparams(:,5)),'k')
     
-    subplot(4,4,4),hold on
+    subplot(8,4,12),hold on
     bar(ll,median(cross_SOCparams(:,6)),'w')
 %     plot(ll,cross_SOCparams(:,6),'k.')
     % 68% ci  ~ 1sd
@@ -319,31 +331,31 @@ for ll = 1:length(electrodes)
         median(cross_SOCparams(:,6))-quantile(cross_SOCparams(:,6),.16),...
         quantile(cross_SOCparams(:,6),.84)-median(cross_SOCparams(:,6)),'k')
 
-    subplot(4,4,7),hold on
+    subplot(8,4,20),hold on
     bar(ll,calccod(cross_SOCestimate,ecog_bb,[],0,1),'w')
 
-    subplot(4,4,8),hold on
+    subplot(8,4,28),hold on
     bar(ll,calccod(cross_SOCestimate,ecog_bb,[],0,0),'w')
 end
 
-subplot(4,4,3),hold on
+subplot(8,4,4),hold on
 xlim([0 9]),ylim([0 1.1])
 title('n parameter')
 xlabel('electrode')
 set(gca,'XTick',[1:8],'XTickLabel',electrodes)
 
-subplot(4,4,4),hold on
+subplot(8,4,12),hold on
 xlim([0 9]),ylim([0 1.1])
 title('c parameter')
 xlabel('electrode')
 set(gca,'XTick',[1:8],'XTickLabel',electrodes)
 
-subplot(4,4,7),hold on
+subplot(8,4,20),hold on
 title('cod mean subtracted')
 xlim([0 9]),ylim([0 110])
 set(gca,'XTick',[1:8],'XTickLabel',electrodes)
 
-subplot(4,4,8),hold on
+subplot(8,4,28),hold on
 title('cod no mean subtracted')
 xlim([0 9]),ylim([0 110])
 set(gca,'XTick',[1:8],'XTickLabel',electrodes)

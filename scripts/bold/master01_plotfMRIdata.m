@@ -41,12 +41,12 @@ a = load(fullfile(dataDir,'bold','dataset03_benchmark.mat'));
 vox_plot = 647;
 vox_name = ['v' int2str(vox_plot) 'closetoSub19El109'];
 
-figure('Position',[0 0 1200 160]),hold on
-subplot(1,3,1:2),hold on
+figure('Position',[0 0 1000 100]),hold on
+subplot(1,2,1),hold on
 
 % get betas from voxel
-bold_plot = betamn(vox_plot,imnumbers_ecog)';
-bolderr_plot = betase(vox_plot,imnumbers_ecog)';
+bold_plot = betamn(vox_plot,imnumbers_ecog)'; % median across the bootstraps
+bolderr_plot = betase(vox_plot,imnumbers_ecog)'; % 68% range of the bootstraps
 
 % plot
 bar(bold_plot,1,'b','EdgeColor',[0 0 0])
@@ -60,18 +60,21 @@ for k = 1:length(stim_change)
 end
 text([19 40 47 52 55 61 70 74 79 84],zeros(10,1)+6,{'space','orie','grat','pl','circ','zcon','sp','zsp','coh','nm'})
 
-ax = axis;
-axis([0 87 ax(3:4)]);
+% ax = axis;
+xlim([0 87])
+ylim([min([bold_plot-bolderr_plot]) ceil(max([bold_plot+bolderr_plot]))]);
+ylabel(['bold % change'])
+title(['voxel' int2str(vox_plot)])
 
 % %%%%% plot the benchmark perforance on top: %%%%%
 % not present for all voxels
-% modelfit=a.modelfit;
-% socfit_plot = modelfit(vox_plot,imnumbers_ecog(imnumbers_ecog<101));
-% plot(1:68,socfit_plot,'r-','LineWidth',3);
+modelfit=a.modelfit;
+socfit_plot = modelfit(vox_plot,imnumbers_ecog(imnumbers_ecog<101));
+plot(1:68,socfit_plot,'r-','LineWidth',3);
 
-set(gcf,'PaperPositionMode','auto')
-print('-dpng','-r300',[dataDir './bold/figures/BOLD_data_' vox_name])
-print('-depsc','-r300',[dataDir './bold/figures/BOLD_data_' vox_name])
+% set(gcf,'PaperPositionMode','auto')
+% print('-dpng','-r300',[dataDir './bold/figures/BOLD_data_' vox_name])
+% print('-depsc','-r300',[dataDir './bold/figures/BOLD_data_' vox_name])
 
 %% Plot a voxel location
 
