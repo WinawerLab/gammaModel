@@ -242,7 +242,10 @@ title('bar pRF (color) and SOC pRF (black)')
 subject_ind = [19 19  19  19  19  19  24 24];
 electrodes = [107 108 109 115 120 121 45 46];
 
-figure('Position',[0 0 1400 800])
+socParams_all = zeros(length(electrodes),6);
+socCOD_all = zeros(length(electrodes),2);
+
+figure('Position',[0 0 600 600])
     
 for ll = 1:length(electrodes)
     
@@ -273,7 +276,7 @@ for ll = 1:length(electrodes)
         squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
     
     %%% PLOT BROADBAND POWER AND SOC FIT
-    subplot(8,2,2*ll-1),hold on
+    subplot(8,5,5*ll-4:5*ll-1),hold on
     bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_bb_err,'k');
     plot(cross_SOCestimate' ,'r','LineWidth',2)
@@ -285,11 +288,12 @@ for ll = 1:length(electrodes)
     for k = 1:length(stim_change)
         plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
     end
+    set(gca,'XTick',[])
     xlim([0 87])
     ylabel(['bb el ' int2str(elec)])
 
     %%% LOOK AT WHERE THE GAUSSIAN IS
-    subplot(8,4,4*ll-1)
+    subplot(8,5,5*ll)
     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
     imagesc(ones(size(xx)),[0 1]);
     axis image, hold on, colormap gray
@@ -305,65 +309,22 @@ for ll = 1:length(electrodes)
         [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*cross_SOCparams(kk,3)./sqrt(cross_SOCparams(kk,5)));
         plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
     end
-
+    axis off
+    
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
     cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange at 1
     cross_SOCparams(:,3) = abs(cross_SOCparams(:,3)); % size>0
-    medianParams = median(cross_SOCparams);
-    % plot median
-%     [~,bbEstimate] = helpfit_SOC2(imEnergyMean,medianParams,[],[]);
-%     plot(bbEstimate,'r','LineWidth',2)
+    socParams_all(ll,:) = median(cross_SOCparams);
 
-    subplot(8,4,4),hold on
-    bar(ll,median(cross_SOCparams(:,5)),'w')
-%     plot(ll,cross_SOCparams(:,5),'k.')
-    % 68% ci  ~ 1sd
-    errorbar(ll,median(cross_SOCparams(:,5)),...
-        median(cross_SOCparams(:,5))-quantile(cross_SOCparams(:,5),.16),...
-        quantile(cross_SOCparams(:,5),.84)-median(cross_SOCparams(:,5)),'k')
-    
-    subplot(8,4,12),hold on
-    bar(ll,median(cross_SOCparams(:,6)),'w')
-%     plot(ll,cross_SOCparams(:,6),'k.')
-    % 68% ci  ~ 1sd
-    errorbar(ll,median(cross_SOCparams(:,6)),...
-        median(cross_SOCparams(:,6))-quantile(cross_SOCparams(:,6),.16),...
-        quantile(cross_SOCparams(:,6),.84)-median(cross_SOCparams(:,6)),'k')
-
-    subplot(8,4,20),hold on
-    bar(ll,calccod(cross_SOCestimate,ecog_bb,[],0,1),'w')
-
-    subplot(8,4,28),hold on
-    bar(ll,calccod(cross_SOCestimate,ecog_bb,[],0,0),'w')
+    socCOD_all(ll,1) = calccod(cross_SOCestimate,ecog_bb,[],0,1);
+    socCOD_all(ll,2) = calccod(cross_SOCestimate,ecog_bb,[],0,0);
 end
 
-subplot(8,4,4),hold on
-xlim([0 9]),ylim([0 1.1])
-title('n parameter')
-xlabel('electrode')
-set(gca,'XTick',[1:8],'XTickLabel',electrodes)
-
-subplot(8,4,12),hold on
-xlim([0 9]),ylim([0 1.1])
-title('c parameter')
-xlabel('electrode')
-set(gca,'XTick',[1:8],'XTickLabel',electrodes)
-
-subplot(8,4,20),hold on
-title('cod mean subtracted')
-xlim([0 9]),ylim([0 110])
-set(gca,'XTick',[1:8],'XTickLabel',electrodes)
-
-subplot(8,4,28),hold on
-title('cod no mean subtracted')
-xlim([0 9]),ylim([0 110])
-set(gca,'XTick',[1:8],'XTickLabel',electrodes)
-
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+print('-depsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
         [analysisType '_allel_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
         [analysisType '_allel_' modelType]))
 
 

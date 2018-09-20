@@ -82,7 +82,7 @@ end
 %% test fitting, in one electrode, few stimuli:
 % channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
 
-elec = 45;
+elec = 109;
 
 data_fft = squeeze(spectra(elec,:,:));
 data_fft_off = squeeze(spectra_off(elec,:,:));
@@ -91,12 +91,15 @@ f_use4fit = [30:57 65:115 126:175 186:200];
 f_sel = ismember(f,f_use4fit);
 
 figure('Position',[0 0 150 150]),hold on
-stims_plot = [39];
+stims_plot = [45 83];
+stims_color = {[1 .1 .1],[0 .3 .9]};
 
 % plot baseline 
 data_base = mean(data_fft_off,1); % baseline
-plot(log10(f),log10(data_base),'k','LineWidth',2)
-plot(log10(f),out_exp(2)-out_exp(1)*log10(f),'k:','LineWidth',2)
+plot(log10(f),log10(data_base),'k','LineWidth',1)
+[out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
+    ecog_fitgamma(f,f_use4fit,data_base,data_base);
+plot(log10(f),out_exp(2)-out_exp(1)*log10(f),'k:','LineWidth',1)
 
 for k = 1:length(stims_plot)
     % get stimulus data
@@ -113,12 +116,12 @@ for k = 1:length(stims_plot)
     resamp_parms(k,6) = out_exp(2); % this is the baseline intercept
 
     % plot stimulus data
-    plot(log10(f),log10(data_fit),'Color',[0 .3 .9],'LineWidth',2)
-    plot(log10(f),fit_f2,':','Color',[0 .3 .9],'LineWidth',2)
+    plot(log10(f),log10(data_fit),'Color',stims_color{k},'LineWidth',1)
+    plot(log10(f),fit_f2,':','Color',stims_color{k},'LineWidth',1)
 end
 
 xlim([log10(30) log10(200)])
-ylim([-1.5 2.1])
+ylim([-2.2 2])
 set(gca,'XTick',[log10(25) log10(50) log10(100) log10(200)],...
     'XTickLabel',{'25','50','100','200'},...
     'YTick',-2:1:2)

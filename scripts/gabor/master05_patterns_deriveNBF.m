@@ -223,7 +223,7 @@ print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','der
 subject_ind = [19 19  19  19  19  19  24 24];
 electrodes = [107 108 109 115 120 121 45 46];
 
-figure('Position',[0 0 1400 800])
+figure('Position',[0 0 600 600])
     
 for ll = 1:length(electrodes)
     
@@ -254,8 +254,8 @@ for ll = 1:length(electrodes)
 
     ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
 
-    subplot(8,2,2*ll-1),hold on
-
+    subplot(8,5,5*ll-4:5*ll-1),hold on
+    
     bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_g_err,'k');
     plot(cross_NBFestimate','r','LineWidth',2)
@@ -268,8 +268,8 @@ for ll = 1:length(electrodes)
     set(gca,'XTick',[1:86],'XTickLabel',[])
     ylabel('gamma')
 
-     %%% LOOK AT WHERE THE GAUSSIAN IS
-    subplot(8,4,4*ll-1)
+    %%% LOOK AT WHERE THE GAUSSIAN IS
+    subplot(8,5,5*ll)
     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
     imagesc(ones(size(xx)),[0 1]);
     axis image, hold on, colormap gray
@@ -283,14 +283,14 @@ for ll = 1:length(electrodes)
     c.th = linspace(0,2*pi, numPoints);
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
     plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-    
+    axis off
 end
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-%         [analysisType '_allel_' modelType]))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-%         [analysisType '_allel_' modelType]))
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        [analysisType '_allel_' modelType]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+        [analysisType '_allel_' modelType]))
     
 %%
 %% Plot model performance

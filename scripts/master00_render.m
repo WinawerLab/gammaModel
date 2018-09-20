@@ -1,7 +1,12 @@
 clear all
 
-addpath('~/Documents/git/ecogBasicCode/')
-addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
+% set paths:
+gammaModelCodePath;
+dataDir = gammaModelDataPath;
+
+% add other toolboxes:
+addpath('/Users/dora/Documents/git/ecogBasicCode/render/')
+addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 %% write gifti
 
@@ -44,6 +49,68 @@ g.vertices = vert_mat; clear vert_mat
 gifti_name = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
 
 save(g,gifti_name,'Base64Binary')
+
+
+%% Render plain with used electrodes
+
+subjects = [19,23,24,9];
+hemi = {'L','L','R','R'};
+els_NBF = {[107 108 109 115 120 121],'',[45 46],''};
+
+v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
+
+for s = 3%1:length(subjects)
+    % subject code
+    if subjects(s)<10
+        subj = ['0' num2str(subjects(s))];
+    else
+        subj = num2str(subjects(s));
+    end
+    
+    % electrode locations name:
+    dataLocName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
+    % gifti file name:
+    dataGiiName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','anat',...
+        ['/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % first data run - to get good channels:
+    dataName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','ieeg',...
+        ['/sub-' subj '_ses-01_task-soc_run-01_ieeg_preproc.mat']);
+    
+    % load electrode locations
+    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
+    elecmatrix = [loc_info.x loc_info.y loc_info.z];
+
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % load channel info - do not plot bad channels in rendering
+    load(dataName);
+
+    % remove bad channels (replace with NaN)
+    elecmatrix(exclude_channels,:) = NaN;
+    
+    % figure with rendering for different viewing angles
+    for k = 1:size(v_dirs,1) % loop across viewing angles
+        v_d = v_dirs(k,:);
+        
+        % make sure electrodes pop out
+        a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
+        els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
+
+        figure
+        ecog_RenderGifti(g) % render
+%         ecog_Label(els,30,12) % add electrode positions
+        el_add(els(els_NBF{s},:),'k',30) % add electrode positions
+        ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
+        
+        set(gcf,'PaperPositionMode','auto')
+        print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','render',...
+            ['subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))]))
+
+        % close all
+    end
+end
 
 
 %% Render plain with electrodes
