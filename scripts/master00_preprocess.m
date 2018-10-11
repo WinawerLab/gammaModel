@@ -1,6 +1,6 @@
 clear all
 
-addpath('~/Documents/git/ecogBasicCode/')
+addpath(genpath('~/Documents/git/ecogBasicCode/'))
 addpath('~/Documents/git/JSONio/')
 addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
 
@@ -16,23 +16,23 @@ dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
 subjects = [19,23,24];
 
-for s = 1:length(subjects)
+for s = 2%:length(subjects)
     % subject name
     subj = subjects(s);
-    dataName = dir([dataRootPath '/sub-' int2str(subj) '/ieeg/sub-' int2str(subj) '_task-soc_run-*_ieeg.mat']);
+    dataName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_ieeg.mat']);
     nr_runs = length(dataName);
-    dataJsonName = dir([dataRootPath '/sub-' int2str(subj) '/ieeg/sub-' int2str(subj) '_task-soc_run-*_ieeg.json']);
-    dataChannelsName = dir([dataRootPath '/sub-' int2str(subj) '/ieeg/sub-' int2str(subj) '_task-soc_run-*_channels.tsv']);
+    dataJsonName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_ieeg.json']);
+    dataChannelsName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_channels.tsv']);
     
     %%%% THIS LOOP IS FOR EPOCHING DATA ACROSS RUNS
-    for data_nr = 1:nr_runs 
+    for data_nr = 1%:nr_runs 
         %%%% load raw data
         disp(['loading data set ' int2str(data_nr)])
-        load([dataRootPath '/sub-' int2str(subj) '/ieeg/' dataName(data_nr).name]);
+        load([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' dataName(data_nr).name]);
          
         %%%% get channel info 
         disp(['loading channels.tsv set ' int2str(data_nr)])
-        channel_info = readtable([dataRootPath '/sub-' int2str(subj) '/ieeg/' dataChannelsName(data_nr).name],...
+        channel_info = readtable([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' dataChannelsName(data_nr).name],...
             'FileType','text','Delimiter','\t');
         % make a vector of channels to exclude from common average
         % referencing
@@ -50,7 +50,7 @@ for s = 1:length(subjects)
         
         %%%% get iEEG info to get sampling frequency
         disp(['loading ieeg.json set ' int2str(data_nr)])
-        ieeg_json = jsonread([dataRootPath '/sub-' int2str(subj) '/ieeg/' dataJsonName(data_nr).name]);
+        ieeg_json = jsonread([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' dataJsonName(data_nr).name]);
         srate = round(ieeg_json.SamplingFrequency);
         
         % plot a quick figure of data quality here
@@ -77,11 +77,11 @@ for s = 1:length(subjects)
         [data] = ecog_CarRegress(data,include_channels);
         
         % resample / cut down to 1000 Hz
-        s=srate*(1000/1031)*(1000/1480); % check that it's appropriate    
+        s = srate*(1000/1031)*(1000/1480); % check that it's appropriate    
         disp(['downsampling to ' int2str(s) ' Hz'])
-        data=resample(data,1000,1031);
-        data=resample(data,1000,1480);
-        srate=floor(s); clear s
+        data = resample(data,1000,1031);
+        data = resample(data,1000,1480);
+        srate = floor(s); clear s
         disp('data downsampled')
         
         temp_data = resample(data,1,1000);
@@ -96,7 +96,7 @@ for s = 1:length(subjects)
         xlim([0 300])
         
         [~,a,~] = fileparts(dataName(data_nr).name);
-        dataNamePrep = [dataRootPath '/sub-' int2str(subj) '/ieeg/' a '_preproc.mat'];
+        dataNamePrep = [dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' a '_preproc.mat'];
         %%%% SAVE DATA
         save(dataNamePrep,'-v7.3','data','srate','include_channels','exclude_channels')
         clear data

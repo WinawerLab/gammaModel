@@ -13,7 +13,7 @@ addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 %%
 
 subjects = [19,23,24];
-s = 1;
+s = 3;
 
 % analysisType = 'spectra';
 % analysisType = 'spectraRERP';
@@ -82,7 +82,7 @@ end
 %% test fitting, in one electrode, few stimuli:
 % channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
 
-elec = 109;
+elec = 45;
 
 data_fft = squeeze(spectra(elec,:,:));
 data_fft_off = squeeze(spectra_off(elec,:,:));
@@ -96,10 +96,16 @@ stims_color = {[1 .1 .1],[0 .3 .9]};
 
 % plot baseline 
 data_base = mean(data_fft_off,1); % baseline
-plot(log10(f),log10(data_base),'k','LineWidth',1)
+% Do not do -std, as it is in power, so no normal distribution, but take
+% confidence intervals or so
+% fill([f; f(end:-1:1)],...
+%     [mean(data_fft_off,1)+std(data_fft_off,[],1) mean(data_fft_off(:,end:-1:1),1)-std(data_fft_off(:,end:-1:1),[],1)],...
+%     [.5 .5 .5],'EdgeColor',[.5 .5 .5])
+plot(f,data_base,'k','LineWidth',1)
+
 [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
     ecog_fitgamma(f,f_use4fit,data_base,data_base);
-plot(log10(f),out_exp(2)-out_exp(1)*log10(f),'k:','LineWidth',1)
+plot(f,10.^(out_exp(2)-out_exp(1)*log10(f)),'k:','LineWidth',1)
 
 for k = 1:length(stims_plot)
     % get stimulus data
@@ -116,22 +122,22 @@ for k = 1:length(stims_plot)
     resamp_parms(k,6) = out_exp(2); % this is the baseline intercept
 
     % plot stimulus data
-    plot(log10(f),log10(data_fit),'Color',stims_color{k},'LineWidth',1)
-    plot(log10(f),fit_f2,':','Color',stims_color{k},'LineWidth',1)
+    plot(f,data_fit,'Color',stims_color{k},'LineWidth',1)
+    plot(f,10.^fit_f2,':','Color',stims_color{k},'LineWidth',1)
 end
 
-xlim([log10(30) log10(200)])
-ylim([-2.2 2])
-set(gca,'XTick',[log10(25) log10(50) log10(100) log10(200)],...
-    'XTickLabel',{'25','50','100','200'},...
-    'YTick',-2:1:2)
-xlabel('Frequency (Hz)'),ylabel('Log10 power')
+xlim([30 200]),ylim([10.^-1.5 10.^2.5])
+set(gca,'XTick',[50 100 200],...
+    'YTick',[10.^-1 10.^0 10.^1 10.^2])
+set(gca,'xscale','log',...
+    'yscale','log')
+xlabel('Frequency (Hz)'),ylabel('Power')
 
-set(gcf,'PaperPositionMode','auto')
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
-    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
-    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
+% set(gcf,'PaperPositionMode','auto')
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+%     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+%     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
 
 
 %%

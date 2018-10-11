@@ -292,25 +292,25 @@ for ll = 1:length(electrodes)
     xlim([0 87])
     ylabel(['bb el ' int2str(elec)])
 
-    %%% LOOK AT WHERE THE GAUSSIAN IS
-    subplot(8,5,5*ll)
-    [~,xx,yy] = makegaussian2d(res,2,2,2,2);
-    imagesc(ones(size(xx)),[0 1]);
-    axis image, hold on, colormap gray
-    plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
-    %%% plot prf from bar/CSS model
-    % gau = makegaussian2d(res,xys_pix(1),xys_pix(2),xys_pix(3),xys_pix(3),xx,yy,0,0);
-    % imagesc(gau);
-    % axis image, hold on, colorbar
-    % look at the prf from the SOC fit:
-    numPoints = 50;
-    c.th = linspace(0,2*pi, numPoints);
-    for kk = 1:size(cross_SOCparams,1)
-        [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*cross_SOCparams(kk,3)./sqrt(cross_SOCparams(kk,5)));
-        plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-    end
-    axis off
-    
+%     %%% LOOK AT WHERE THE GAUSSIAN IS
+%     subplot(8,5,5*ll)
+%     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
+%     imagesc(ones(size(xx)),[0 1]);
+%     axis image, hold on, colormap gray
+%     plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
+%     %%% plot prf from bar/CSS model
+%     % gau = makegaussian2d(res,xys_pix(1),xys_pix(2),xys_pix(3),xys_pix(3),xx,yy,0,0);
+%     % imagesc(gau);
+%     % axis image, hold on, colorbar
+%     % look at the prf from the SOC fit:
+%     numPoints = 50;
+%     c.th = linspace(0,2*pi, numPoints);
+%     for kk = 1:size(cross_SOCparams,1)
+%         [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*cross_SOCparams(kk,3)./sqrt(cross_SOCparams(kk,5)));
+%         plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+%     end
+%     axis off
+%     
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
     cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange at 1
@@ -321,10 +321,15 @@ for ll = 1:length(electrodes)
     socCOD_all(ll,2) = calccod(cross_SOCestimate,ecog_bb,[],0,0);
 end
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType]))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType]))
+% print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType]))
 
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit']))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit']))
 

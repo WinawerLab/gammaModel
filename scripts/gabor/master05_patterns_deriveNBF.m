@@ -144,7 +144,6 @@ for el = 1:length(electrodes)
         % leftout stimulus
         [~,kkEstimate] = helpfit_NBFsimple(stimulus(kk,:),[seed_params(1:3) B],[],[]);
         cross_NBFestimate(kk,1,1) = kkEstimate;
-        
     end
 
     save(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
@@ -265,7 +264,7 @@ for ll = 1:length(electrodes)
         plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
     end
     xlim([0 87]), ylim(ylims(1,:))
-    set(gca,'XTick',[1:86],'XTickLabel',[])
+    set(gca,'XTick',[])
     ylabel('gamma')
 
     %%% LOOK AT WHERE THE GAUSSIAN IS
@@ -281,8 +280,12 @@ for ll = 1:length(electrodes)
     % look at the prf from the SOC fit:
     numPoints = 50;
     c.th = linspace(0,2*pi, numPoints);
+    % plot 1 sd
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
     plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    % plot 2 sd
+    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*2*seed_params(3));
+    plot(c.x + seed_params(2), c.y + seed_params(1), 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
     axis off
 end
 
@@ -348,11 +351,11 @@ set(gca,'XTick',[1 2],'XTickLabel',{'COD -mean','COD'})
 
 xlim([0 3]),ylim([0 100])
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-        ['NBF_CODcross_' analysisType '_allel_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
-        ['NBF_CODcross_' analysisType '_allel_' modelType]))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+%         ['NBF_CODcross_' analysisType '_allel_' modelType]))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+%         ['NBF_CODcross_' analysisType '_allel_' modelType]))
 
     
 %%

@@ -207,7 +207,7 @@ end
 %% plot one channel, and select a few conditions, to check:
 
 % channels to plot:
-electrodes = [120];
+electrodes = [109];
 
 % stimuli to plot:
 % stims_plot = [39:46]; % gratings orientation
