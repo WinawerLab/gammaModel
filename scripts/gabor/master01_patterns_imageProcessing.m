@@ -172,218 +172,68 @@ load(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gab
 
 
 %%
-%% load ECoG data 
+%% Visualize energy per orientation
 %%
 
-%%%%% Pick a subject:
-subjects = [19,23,24];
-s = 1; subj = subjects(s);
+load(fullfile(dataDir,'soc_bids','derivatives','Gaborfilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+stimulus = sqrt(blob(stimulus.^2,2,2)); % quadrature pairs
+% sum across orientation.  after this step, stimulus is images x positions.
+imEnergyMean = blob(stimulus,2,8);
 
-%%%%% Pick an electrode:
-% electrodes = [107 108 109 115 120 121]; % S1
-% electrodes = [53 54]; % S2
-% electrodes = [45 46]; % S3
-elec = 109;
+numOrientations = 8;
 
-% Choose an analysis type:
-% analysisType = 'spectraRERP500';
-% analysisType = 'spectra';
-% analysisType = 'spectra500';
-analysisType = 'spectra200';
+res = sqrt(size(stimulus,2)/numOrientations);
 
-% % load resamp_parms_even and resamp_parms_odd for even/odd:
-% dataFitName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '_evenodd.mat'];
-% load(dataFitName)
-% load resamp_parms for 100 bootstraps:
-dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
-    'ses-01','derivatives','ieeg',...
-    ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
-load(dataFitName)
+% Select an image number:
+inNr = 54;
+thisIm = reshape(stimulus(inNr,:),numOrientations,res,res); 
 
-% Broadband estimate, one value per image:
-bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
-% log power:
-% ecog_bb = resamp_parms(:,:,2)-bb_base;
-% %%% not working yetecog_bb_err=[squeeze(quantile(resamp_parms(:,:,2),.025,2)) ...
-%     squeeze(quantile(resamp_parms(:,:,2),.975,2))]'-bb_base;
-% power:
-ecog_bb = 10.^(resamp_parms(:,:,2)-bb_base)-1;
+% Imagine this pRF
+pp = [res/2 res/2 res/5];
+[~,xx,yy] = makegaussian2d(res,2,2,2,2);
+gaufun1 = @(pp) vflatten(makegaussian2d(res,pp(1),pp(2),pp(3),...
+    pp(3),xx,yy,0,0)/(2*pi*pp(3)^2)); % Gaussian or pRF
+imEnergyPrf = imEnergyMean(inNr,:)'.*gaufun1(pp);
 
-% Gamma power estimate, one value per image:
-% ecog_g = 10.^resamp_parms(:,:,3)-1;
-% %%%% not working yet: ecog_g_err=[squeeze(quantile(resamp_parms(:,:,3),.025,2)) ...
-%     squeeze(quantile(resamp_parms(:,:,3),.975,2))]';
-
-% Pick ECoG values to analyse:
-ecog_vals=ecog_bb;
-
-%%
-%%
-%%
-%%
-%% not updated, old code:
-%%
-%%
-%%
-%%
-
-%% %%% Prepare for model fitting
-
-% to prepare for the call to fitnonlinearmodel.m, we have to define various
-% input parameters.  this is what we will now do.
-
-% define constants
-res = 135;  % resolution of the pre-processed stimuli
-
-% in this example script, we will be fitting only some of the parameters of the
-% SOC model.  the other parameters have already been fixed (see above).
-%
-% the parameters that we will be fitting are [R C S G N C] where
-%   R is the row index of the center of the 2D Gaussian
-%   C is the column index of the center of the 2D Gaussian
-%   S is the standard deviation of the 2D Gaussian
-%   G is a gain parameter
-%   N is the exponent of the power-law nonlinearity
-%   C is a parameter that controls the strength of second-order contrast
-
-% define initial seeds for model parameters.  to help avoid the problem of
-% local minima, we will start at several different initial seeds (corresponding to
-% different combinations of N and C), and we will choose the model that
-% achieves the best fit to the data.
-Ns = [.05 .1 .2 .3 .4 .5 .6 .7 1];
-Cs = [.1 .4 .7 .8 .85 .9 .95 .975 .99 .995];
-seeds = [];
-for p=1:length(Ns)
-  for q=1:length(Cs)
-    seeds = cat(1,seeds,[(1+res)/2 (1+res)/2 res/4*sqrt(0.5) 10 Ns(p) Cs(q)]);  
-  end
+% Make figure for energy for every orientation
+figure('Position',[0 0 1000 200]), 
+OrientationEnergy = zeros(1,numOrientations);
+for kk = 1:numOrientations
+    subplot(1,numOrientations,kk)
+    thisImPrf = thisIm(kk,:,:);
+    thisImPrf = thisImPrf(:).*gaufun1(pp);
+    % Plot
+    imagesc(reshape(thisImPrf,res,res))
+    axis square
+    axis off
+    % Get energy for this orientation
+    OrientationEnergy(kk) = sum(thisImPrf);
 end
+colormap gray
 
-% define bounds for the model parameters
-bounds = [1-res+1 1-res+1 0   -Inf 0   0;
-          2*res-1 2*res-1 Inf  Inf Inf 1];
+% Plot original image and energy across orientations
+figure('Position',[0 0 250 100]),
+subplot(1,2,1)
+mx = max(abs(stimuli(:)));
+imagesc(stimuli(:,:,inNr))
+axis image tight off;
+caxis([0 mx]);
+colormap(gray);
 
-% define a version of bounds where we insert NaNs in the first row
-% in the spots corresponding to the N and C parameters.  this
-% indicates to fix these parameters and not optimize them.
-boundsFIX = bounds;
-boundsFIX(1,5:6) = NaN;
+subplot(1,2,2)
+bar(OrientationEnergy,'w')
+xlim([0 9]),ylim([0 .2])
+box off
+ylabel('energy')
+title(['im ' int2str(inNr) ' sd=' num2str(std(OrientationEnergy),3)])
+set(gca,'FontName','Arial','FontSize',8)
 
-% issue a dummy call to makegaussian2d.m to pre-compute xx and yy.
-% these variables are re-used to achieve faster computation.
-[d,xx,yy] = makegaussian2d(res,2,2,2,2);
-
-% define a helper function that we will use for the SOC model.
-% this function accepts stimuli (dd, a matrix of size A x 90*90),
-% weights (wts, a vector of size 135*135 x 1), and a parameter
-% (c, a scalar) and outputs a measure of variance (as a vector
-% of size A x 1).  intuitively, this function computes
-% a weighted average, subtracts that off, squares, and
-% computes a weighted sum.
-socfun = @(dd,wts,c) bsxfun(@minus,dd,c*(dd*wts)).^2 * wts;
-
-% define another helper function.  given a set of parameters,
-% this function outputs a 2D Gaussian (as a vector of size 135*135 x 1)
-gaufun = @(pp) vflatten(makegaussian2d(res,pp(1),pp(2),pp(3),pp(3),xx,yy,0,0)/(2*pi*pp(3)^2));
-
-% we will now define a function that implements the SOC model.  this function
-% accepts a set of parameters (pp, a vector of size 1 x 6) and a set of stimuli
-% (dd, a matrix of size A x 135*135) and outputs the predicted response to those
-% stimuli (as a vector of size A x 1).
-modelfun = @(pp,dd) pp(4)*(socfun(dd,gaufun(pp),restrictrange(pp(6),0,1)).^pp(5));
-
-% notice that in the above function, we use restrictrange to force C to be
-% between 0 and 1.  this is necessary because even though we defined bounds
-% for the parameters (see above), we will be using the Levenberg-Marquardt
-% optimization algorithm, which does not respect parameter bounds.
-
-% we are ready to define the final model specification.  in the following,
-% we specify a stepwise fitting scheme.  in the first fit (the first row),
-% we start at the seed and optimize all parameters except the N and C parameters.
-% in the second fit (the second row), we start at the parameters estimated in
-% the first fit and optimize all parameters.  the reason that the first entry
-% is [] is that we will be using a mechanism that evaluates multiple initial
-% seeds, and in that case the first entry here is ignored.
-model = {{[]         boundsFIX   modelfun} ...
-         {@(ss) ss   bounds      @(ss) modelfun}};
-
-% define optimization options (these are added on top of
-% the default options used in fitnonlinearmodel.m)
-optimoptions = {'Algorithm' 'levenberg-marquardt' 'Display' 'off'};
-
-% define the resampling scheme to use.  here, we use 0, which
-% means to just fit the data (no cross-validation nor bootstrapping).
-resampling = 0;
-
-% define the metric that we will use to quantify goodness-of-fit.
-metric = @(a,b) calccod(a,b,[],[],0);
-
-% specify the index of the voxel to fit
-% ix = 204; 
-
-% finally, construct the options struct that will be passed to fitnonlinearmodel.m
-opt = struct( ...
-  'stimulus',     stimulus, ...
-  'data',         ecog_vals, ...
-  'model',        {model}, ...
-  'seed',         seeds, ...
-  'optimoptions', {optimoptions}, ...
-  'resampling',   resampling, ...
-  'metric',       metric);
-
-% do a quick inspection of opt
-opt
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','filteredStimFigure',...
+    ['stimulus-' int2str(inNr) '_orientationEnergy']))
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','filteredStimFigure',...
+    ['stimulus-' int2str(inNr) '_orientationEnergy']))
 
 
-%% %%% Fit the model
 
-results = fitnonlinearmodel(opt);
-
-
-%% %%% Inspect the results
-
-% these are the final parameter estimates
-results.params
-% the fitted parameters are [R C S G N C] where
-%   R is the row index of the center of the 2D Gaussian
-%   C is the column index of the center of the 2D Gaussian
-%   S is the standard deviation of the 2D Gaussian
-%   G is a gain parameter
-%   N is the exponent of the power-law nonlinearity
-%   C is a parameter that controls the strength of second-order contrast
-
-% this is the R^2 between the model fit and the data
-results.trainperformance
-%%
-% visualize the data and the model fit
-figure; setfigurepos([100 100 600 450]); 
-
-subplot(2,1,1),hold on;
-bar(ecog_vals,1);
-% errorbar2(1:86,betamn(ix,1:99),betase(ix,1:99),'v','g-','LineWidth',2);
-modelfit = modelfun(results.params,stimulus);
-
-plot(1:86,modelfit,'r-','LineWidth',3);
-
-% plot stimulus cutoffs
-stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
-for k=1:length(stim_change)
-    plot([stim_change(k) stim_change(k)],[0 1],'g')
-end
-text([19 40 46 52 55 61 70 74 79 84],zeros(10,1)-.25,{'space','orie','grat','pl','circ','zcon','sp','zsp','coh','nm'})
-
-ax = axis;
-axis([0 100 ax(3:4)]);
-xlabel('Stimulus number');
-ylabel('ECoG signal');
-title(['Data and model fit R=' int2str(results.trainperformance)]);
-
-subplot(2,1,2)
-%%% LOOK AT WHERE THE GAUSSIAN IS
-gau = makegaussian2d(res,results.params(1),results.params(2),results.params(3)/sqrt(results.params(5)),results.params(3)/sqrt(results.params(5)),xx,yy,0,0);
-imagesc(gau);axis equal; colorbar;hold on
-
-% set(gcf,'PaperPositionMode','auto')
-% print('-dpng','-r300',['./figures/fit_tests/' subj '_el'  int2str(electr) '_gainseed_' int2str(seeds(1,4))])
-% print('-depsc','-r300',['./figures/fit_tests/' subj '_el'  int2str(electr) '_gainseed_' int2str(seeds(1,4))])
 

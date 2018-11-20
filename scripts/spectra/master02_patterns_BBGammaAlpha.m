@@ -13,7 +13,7 @@ addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 %%
 
 subjects = [19,23,24];
-s = 3;
+s = 1;
 
 % analysisType = 'spectra';
 % analysisType = 'spectraRERP';
@@ -82,38 +82,54 @@ end
 %% test fitting, in one electrode, few stimuli:
 % channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
 
-elec = 45;
+elec = 109;
 
 data_fft = squeeze(spectra(elec,:,:));
 data_fft_off = squeeze(spectra_off(elec,:,:));
 
 f_use4fit = [30:57 65:115 126:175 186:200];
 f_sel = ismember(f,f_use4fit);
+nr_boots = 100;
 
 figure('Position',[0 0 150 150]),hold on
 stims_plot = [45 83];
 stims_color = {[1 .1 .1],[0 .3 .9]};
 
 % plot baseline 
-data_base = mean(data_fft_off,1); % baseline
+
 % Do not do -std, as it is in power, so no normal distribution, but take
 % confidence intervals or so
 % fill([f; f(end:-1:1)],...
 %     [mean(data_fft_off,1)+std(data_fft_off,[],1) mean(data_fft_off(:,end:-1:1),1)-std(data_fft_off(:,end:-1:1),[],1)],...
 %     [.5 .5 .5],'EdgeColor',[.5 .5 .5])
-plot(f,data_base,'k','LineWidth',1)
 
+data_base_boot = zeros(nr_boots,size(data_fft_off,2));
+% bootstrap data and plot:
+for ii = 1:nr_boots
+    % from baseline data, random sample with replacement
+    trial_set = randsample(size(data_fft_off,1),size(data_fft_off,1),true);
+
+    % average across resampled trials
+    data_base_boot(ii,:) = mean(data_fft_off(trial_set,:),1);
+end
+fill([f; f(end:-1:1)],...
+    [quantile(data_base_boot,.16) quantile(data_base_boot(:,end:-1:1),.84)],...
+    [.5 .5 .5])
+% plot(f,mean(data_base_boot,1),'k','LineWidth',1)
+
+% mean baseline for fit
+data_base = mean(data_fft_off,1); % baseline
 [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
     ecog_fitgamma(f,f_use4fit,data_base,data_base);
 plot(f,10.^(out_exp(2)-out_exp(1)*log10(f)),'k:','LineWidth',1)
 
 for k = 1:length(stims_plot)
     % get stimulus data
-    data_fit = mean(data_fft(stims==stims_plot(k),:),1); % stimuli
+    data_fit = data_fft(stims==stims_plot(k),:); % stimuli
     
     % fit stimulus data
     [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
-        ecog_fitgamma(f,f_use4fit,data_base,data_fit);
+        ecog_fitgamma(f,f_use4fit,data_base,mean(data_fit,1));
     resamp_parms(k,1) = out_exp(1); % this is the baseline slope
     resamp_parms(k,2) = bb_amp;
     resamp_parms(k,3) = gamma_amp; % actual gamma amplitude is gamma_amp./gamma_width
@@ -121,24 +137,38 @@ for k = 1:length(stims_plot)
     resamp_parms(k,5) = gamma_width;
     resamp_parms(k,6) = out_exp(2); % this is the baseline intercept
 
-    % plot stimulus data
-    plot(f,data_fit,'Color',stims_color{k},'LineWidth',1)
+    % plot fit to the mean
     plot(f,10.^fit_f2,':','Color',stims_color{k},'LineWidth',1)
+    
+    % bootstrap data and plot CI
+    data_boot = zeros(nr_boots,size(data_fit,2));
+    for ii = 1:nr_boots
+        % from baseline data, random sample with replacement
+        trial_set = randsample(size(data_fit,1),size(data_fit,1),true);
+
+        % average across resampled trials
+        data_boot(ii,:) = mean(data_fit(trial_set,:),1);
+
+    end
+    fill([f; f(end:-1:1)],...
+        [quantile(data_boot,.84) quantile(data_boot(:,end:-1:1),.16)],...
+        [.5 .5 .5],'EdgeColor',stims_color{k})
+%     plot(f,mean(data_boot,1),'Color',stims_color{k},'LineWidth',1)
+%     plot(f,data_fit,'Color',stims_color{k},'LineWidth',1)
 end
 
-xlim([30 200]),ylim([10.^-1.5 10.^2.5])
+% xlim([30 200]),ylim([10.^-1.5 10.^2.5])
+% xlim([30 200]),ylim([10.^-2 10.^1.6])
 set(gca,'XTick',[50 100 200],...
     'YTick',[10.^-1 10.^0 10.^1 10.^2])
-set(gca,'xscale','log',...
-    'yscale','log')
+set(gca,'xscale','log','yscale','log','TickLength',[0.05 .1])
 xlabel('Frequency (Hz)'),ylabel('Power')
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
-%     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
-%     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
-
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+    ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
 
 %%
 %% Fit gamma/bb for electrodes that we want to analyze 

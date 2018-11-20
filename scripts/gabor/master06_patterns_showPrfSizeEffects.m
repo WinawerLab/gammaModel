@@ -61,7 +61,7 @@ s = 3; subj = subjects(s);
 analysisType = 'spectra200';
 modelType = 'NBFsimple2';
 
-elec = 45;
+elec = 46;
 res = sqrt(size(stimulus,2)/8);
 
 % Load NBF model fit:
@@ -161,6 +161,8 @@ end
 subplot(3,length(im_nrs),length(im_nrs)*2+[1 2]),hold on
 bar([1:length(im_nrs)],ecog_g(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
 plot([1:length(im_nrs); 1:length(im_nrs)],ecog_g_err(:,im_nrs),'k');
+plot([1:length(im_nrs)],cross_NBFestimate(im_nrs),'r','LineWidth',1)
+plot([1:length(im_nrs)],cross_NBFestimate(im_nrs),'r.','MarkerSize',20)
 ylim([0 max(max(ecog_g_err(:,im_nrs)))])
 xlim([0 length(im_nrs)+1])
 set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
@@ -179,17 +181,19 @@ set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
 % plot(1:length(im_nrs),modelfit1(im_nrs)' ,'b','LineWidth',2)
 
 
-% set(gcf,'PaperPositionMode','auto')
-% % print('-depsc2','-r300','-painters','-tiff',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
-% %         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+set(gcf,'PaperPositionMode','auto')
+% print('-depsc2','-r300','-painters','-tiff',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+%         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 % print('-dpsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
 %         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
-%         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+        ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+        ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
     
     
-%% zoom into some images because the eps in teh overview file misaligns the prf and image..
+%% zoom into some images because the eps in the overview file misaligns the prf and image..
 max_prf_images = 0.05;
 
 for kk = 1:length(im_nrs)
@@ -282,7 +286,8 @@ for ll = 1:length(electrodes)
     subplot(length(electrodes),6,6*ll-5),hold on
     bar([1:length(im_nrs)],ecog_g(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:length(im_nrs); 1:length(im_nrs)],ecog_g_err(:,im_nrs),'k');
-    plot(1:length(im_nrs),cross_NBFestimate(im_nrs)' ,'r','LineWidth',2)
+    plot(1:length(im_nrs),cross_NBFestimate(im_nrs)' ,'r','LineWidth',1)
+    plot(1:length(im_nrs),cross_NBFestimate(im_nrs)' ,'r.','MarkerSize',20)
     xlim([0 length(im_nrs)+1]),ylim([0 max(max(ecog_g_err(:,im_nrs)))])
     set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
 

@@ -1,6 +1,6 @@
 addpath('~/Documents/git/ecogBasicCode/')
-addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
 addpath(genpath('~/Documents/m-files/knkutils'));
+
 %% load all data together
 %%
 

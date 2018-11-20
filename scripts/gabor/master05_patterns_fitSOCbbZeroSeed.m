@@ -310,7 +310,15 @@ for ll = 1:length(electrodes)
 %         plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
 %     end
 %     axis off
-%     
+
+    %%% PLOT SCATTERPLOT DATA VS PREDICTION
+    subplot(8,5,5*ll),hold on
+    plot(ylims(1,:),ylims(1,:),'Color',[.5 .5 .5])
+    plot(cross_SOCestimate,ecog_bb,'k.');
+    xlim(ylims(1,:))
+    ylim(ylims(1,:))
+    axis square, box off
+
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
     cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange at 1
@@ -327,9 +335,9 @@ end
 % print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
 %         [analysisType '_allel_' modelType]))
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+        [analysisType '_allel_' modelType '_onlyfit']))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+        [analysisType '_allel_' modelType '_onlyfit']))
 
