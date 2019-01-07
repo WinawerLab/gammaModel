@@ -7,7 +7,7 @@ function [prf_size] = xy2prfsize(xys,v_area)
 %
 % input: 
 %   xys = [x y optional]; x and y position of pRF in degrees of visual angle 
-%   v_area = [1]; use 1 for V1, 2 for V2, 3 for V3 and 4 for V4
+%   v_area = [1]; use 2 for V1, 3 for V2, 4 for V3 and 6 for V4 as in freesurfer label
 %
 % output:
 %   prf_size: prf size in degrees of visual angle.

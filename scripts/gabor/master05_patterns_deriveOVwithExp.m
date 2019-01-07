@@ -67,9 +67,9 @@ elseif subj==24
     electrodes = [45 46]; % S3
 elseif subj==1001
     im_deg = rad2deg(atan(20./60));
-    electrodes = [37 49 50 51 52 57 58 59 60]; % S1001 V1, V2, V3
+    electrodes = [49 50 51 52 57 58 59 60]; % S1001 V1, V2, V3
 end
-% electrodes = [109];
+% electrodes = [51];
 
 res = sqrt(size(stimulus,2)/nrOrientations);  % resolution of the pre-processed stimuli
 
@@ -120,10 +120,10 @@ for el = 1:length(electrodes)
     xys_deg(1:2) = [xys_deg(2) xys_deg(1)]; % make sure that it matches images
 
     % Derive pRF size from eccentricity:
-    [prf_s] = xy2prfsize(xys,v_area);
+    [prf_s] = xy2prfsize(xys_deg,v_area);
     prf_s_pix = res.*(prf_s./im_deg);
 
-    %% Fit gamma model.
+    %% Fit gamma model
 
     % Exponents
     ov_exponents = [.1:.1:1];
@@ -131,7 +131,6 @@ for el = 1:length(electrodes)
     % Initalize outputs:
     cross_OVparams = zeros(size(ecog_bb,1),5,length(ov_exponents));
     cross_OVestimate = zeros(size(ecog_bb,1),1,length(ov_exponents));
-    
     
     % Estimate gain, leave one out every time for cross validation
     for ii = 1:length(ov_exponents)
@@ -166,6 +165,8 @@ for el = 1:length(electrodes)
         'cross_OVparams','cross_OVestimate')
     % OVexp uses derived prf size from eccentricity as seed for size
     
+    disp(['Done fitting OV model for subj ' int2str(subj) ' el ' int2str(elec)])
+    
 end
 
 
@@ -179,12 +180,12 @@ s = 4; subj = subjects(s);
 % electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
-% electrodes = [37 49 50 51 52 57 58 59 60]; % S1001 V1, V2, V3
+% electrodes = [49 50 51 52 57 58 59 60]; % S1001 V1, V2, V3
 
 analysisType = 'spectra200';
 modelType = 'OVsimple';
 
-elec = 37;
+elec = 60;
 res = sqrt(size(stimulus,2)/8);
 
 % load model fit
@@ -238,7 +239,7 @@ ov_exponents = [.1:.1:1];
 subject_ind = [19 19  19  19  19  19  24 24];
 electrodes = [107 108 109 115 120 121 45 46];
 % subject_ind = [1001 1001 1001 1001 1001 1001 1001 1001 1001];
-% electrodes = [37 49 50 51 52 57 58 59 60];
+% electrodes = [49 50 51 52 57 58 59 60];
 
 figure('Position',[0 0 600 700])
     
@@ -271,7 +272,7 @@ for ll = 1:length(electrodes)
 
     ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
 
-    subplot(9,5,5*ll-4:5*ll-1),hold on
+    subplot(8,5,5*ll-4:5*ll-1),hold on
     
     bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_g_err,'k');
@@ -287,7 +288,7 @@ for ll = 1:length(electrodes)
     ylabel('gamma')
 
     %%% LOOK AT WHERE THE GAUSSIAN IS
-    subplot(9,5,5*ll)
+    subplot(8,5,5*ll)
     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
     imagesc(ones(size(xx)),[0 1]);
     axis image, hold on, colormap gray
@@ -329,8 +330,8 @@ subject_ind = [19 19  19  19  19  19  24 24];
 electrodes = [107 108 109 115 120 121 45 46];
 % subject_ind = [1001 1001 1001 1001 1001 1001 1001 1001 1001];
 % electrodes = [37 49 50 51 52 57 58 59 60];
-subject_ind = [19 19  19  19  19  19  24 24 1001 1001 1001 1001 1001 1001 1001 1001 1001];
-electrodes = [107 108 109 115 120 121 45 46 37 49 50 51 52 57 58 59 60];
+subject_ind = [19 19  19  19  19  19  24 24 1001 1001 1001 1001 1001 1001 1001 1001];
+electrodes = [107 108 109 115 120 121 45 46 49 50 51 52 57 58 59 60];
 
 % COD output size electrodes X 2
 % column 1: mean subtracted COD
@@ -371,6 +372,7 @@ for ll = 1:length(electrodes)
         nbf_cod(ll,2,ii) = calccod(cross_OVestimate(:,:,ii),ecog_g,[],0,0); 
     end
 end
+
 %%
 figure('Position',[0 0 300 500])
 for ii = 1:size(cross_OVestimate,3)
@@ -379,7 +381,7 @@ for ii = 1:size(cross_OVestimate,3)
     plot(ii+(1:length(electrodes))/50,nbf_cod(:,1,ii),'k.')
     set(gca,'XTick',1:size(cross_OVestimate,3),'XTickLabel',ov_exponents)
     ylabel('COD-mean')
-    xlim([0 size(cross_OVestimate,3)+1]),ylim([0 100])  
+    xlim([0 size(cross_OVestimate,3)+1]),%ylim([0 100])  
     
     subplot(2,1,2),hold on
     bar(ii,mean(nbf_cod(:,2,ii)),'w')
@@ -389,9 +391,9 @@ for ii = 1:size(cross_OVestimate,3)
     xlim([0 size(cross_OVestimate,3)+1]),ylim([0 100])
     xlabel('n in variance^n')
 end
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
-%         ['OV_CODcross_' analysisType '_allel_' modelType]))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
-%         ['OV_CODcross_' analysisType '_allel_' modelType]))
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+        ['OV_CODcross_' analysisType '_allel_' modelType]))
+print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+        ['OV_CODcross_' analysisType '_allel_' modelType]))
 

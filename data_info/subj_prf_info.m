@@ -13,6 +13,7 @@ function [v_area,xys,roi_labels] = subj_prf_info(subj_nr,elec)
 % DH 2018
 
 roi_labels = {'?','V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2'};
+% v_area nr:   1 ,  2 ,  3 ,  4 ,  5   ,   6 ,...
 
 % load(fullfile(gammaModelDataPath,'ECoG_pRF',[int2str(subj_nr) '_pRFbb_chan' int2str(elec) '.mat']));
 
@@ -65,7 +66,7 @@ switch subj_nr
      case 1001
         switch elec
             case 37
-                v_area = 4;%v3 dorsal
+                v_area = 5;%v3a dorsal, at the upper edge
             case 49
                 v_area = 3;%v2 ventral
             case 50

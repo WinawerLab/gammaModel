@@ -151,8 +151,8 @@ end
 %%
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
-subjects = [19,23,24];
-s = 1;
+subjects = [19,23,24,1001];
+s = 4;
 
 % analysisType = 'spectra';
 % analysisType = 'spectra500';
@@ -170,8 +170,8 @@ load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','inc
 
 %% plot one channel, all conditions, to check:
 
-% channels to plot (s1: 115 | s2: 53 54 | s3: 45 46):
-electrodes=[109]; 
+% channels to plot (s1: 115 | s2: 53 54 | s3: 45 46 | s4: 37 49 50 51 52 57 58 59 60):
+electrodes=[58]; 
 
 cm = jet(max(stims));
 
@@ -194,7 +194,7 @@ for k=1:length(electrodes)
     fill([log10(117) log10(124) log10(124) log10(117)],[2 2 -2 -2],[.9 .9 .9],'EdgeColor',[.9 .9 .9])
     fill([log10(177) log10(184) log10(184) log10(177)],[2 2 -2 -2],[.9 .9 .9],'EdgeColor',[.9 .9 .9])
     
-    xlim([log10(5) log10(200)])
+    xlim([log10(25) log10(200)])
     set(gca,'XTick',[log10(10) log10(25) log10(50) log10(100) log10(200)])
     set(gca,'XTickLabel',{'10','25','50','100','200'})
     
@@ -207,13 +207,14 @@ end
 %% plot one channel, and select a few conditions, to check:
 
 % channels to plot:
-electrodes = [109];
+electrodes = [58];
 
 % stimuli to plot:
 % stims_plot = [39:46]; % gratings orientation
 % stims_plot = [47:50 39]; % gratings contrast
-stims_plot = [11 29]; 
+% stims_plot = [11 29]; 
 % stims_plot = [79:82]; 
+stims_plot = [74:78]; 
 % cm = jet(length(stims_plot));
 cm = winter(length(stims_plot));
 
@@ -237,7 +238,7 @@ for k=1:length(electrodes)
 %     fill([log10(117) log10(124) log10(124) log10(117)],[2 2 -2 -2],[.9 .9 .9],'EdgeColor',[.9 .9 .9])
 %     fill([log10(177) log10(184) log10(184) log10(177)],[2 2 -2 -2],[.9 .9 .9],'EdgeColor',[.9 .9 .9])
     
-    xlim([log10(5) log10(250)])
+    xlim([log10(25) log10(200)])
     set(gca,'XTick',[log10(10) log10(25) log10(50) log10(100) log10(200)])
     set(gca,'XTickLabel',{'10','25','50','100','200'})
     

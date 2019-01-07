@@ -173,14 +173,14 @@ s = 4; subj = subjects(s);
 % electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
-% electrodes = [37 49 50 51 52 57 58 59 60]; % S1001: V1, V2, V3
+% electrodes = [49 50 51 52 57 58 59 60]; % S1001: V1, V2, V3
 % electrodes = [44 45 53 54]; % S1001 epilepsy
-% electrodes = [43]; % S1001 periphery
+% electrodes = [37 43]; % S1001 V3a / periphery
 
 analysisType = 'spectra200';
 modelType = 'fitSOCbbpower2';
 
-elec = 53;
+elec = 51;
 res = sqrt(size(imEnergyMean,2));
 
 % load model fit
@@ -252,10 +252,10 @@ print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fit
 %% Figure all subjects
 
 %%%%% Pick a subject:
-% subject_ind = [19 19  19  19  19  19  24 24];
-% electrodes = [107 108 109 115 120 121 45 46];
-subject_ind = [1001 1001 1001 1001 1001 1001 1001 1001 1001];
-electrodes = [37 49 50 51 52 57 58 59 60];
+subject_ind = [19 19  19  19  19  19  24 24];
+electrodes = [107 108 109 115 120 121 45 46];
+% subject_ind = [1001 1001 1001 1001 1001 1001 1001 1001 1001];
+% electrodes = [49 50 51 52 57 58 59 60];
 
 socParams_all = zeros(length(electrodes),6);
 socCOD_all = zeros(length(electrodes),2);
@@ -291,7 +291,7 @@ for ll = 1:length(electrodes)
         squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
     
     %%% PLOT BROADBAND POWER AND SOC FIT
-    subplot(9,5,5*ll-4:5*ll-1),hold on
+    subplot(8,5,5*ll-4:5*ll-1),hold on
     bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_bb_err,'k');
     plot(cross_SOCestimate' ,'r','LineWidth',2)
@@ -327,7 +327,7 @@ for ll = 1:length(electrodes)
 %     axis off
 
 %     %%% PLOT SCATTERPLOT DATA VS PREDICTION
-%     subplot(9,5,5*ll),hold on
+%     subplot(8,5,5*ll),hold on
 %     plot(ylims(1,:),ylims(1,:),'Color',[.5 .5 .5])
 %     plot(cross_SOCestimate,ecog_bb,'k.');
 %     xlim(ylims(1,:))
@@ -351,14 +351,20 @@ end
 % print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
 %         [analysisType '_allel_' modelType]))
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
-
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
+        [analysisType '_allel_' modelType '_onlyfit']))
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
+        [analysisType '_allel_' modelType '_onlyfit']))
+
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_SubChaam']))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_SubChaam']))
+
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
+% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
