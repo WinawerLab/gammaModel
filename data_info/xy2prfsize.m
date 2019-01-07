@@ -16,13 +16,13 @@ function [prf_size] = xy2prfsize(xys,v_area)
 
 
 % slope from eccentricity to size
-if v_area(1) == 1 %V1
+if v_area(1) == 2 %V1
     this_slope = 0.8/5;    
-elseif v_area(1) == 2 %V2
+elseif v_area(1) == 3 %V2
     this_slope = 1/5;
-elseif v_area(1) == 3 % V3
+elseif v_area(1) == 4 % V3
     this_slope = 1.6/5;
-elseif v_area(1) == 4 %V4
+elseif v_area(1) == 6 %V4
     this_slope = 3/5;
 end
 

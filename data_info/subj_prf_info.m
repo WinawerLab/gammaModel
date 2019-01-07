@@ -14,7 +14,7 @@ function [v_area,xys,roi_labels] = subj_prf_info(subj_nr,elec)
 
 roi_labels = {'?','V1','V2','V3','V3AB','hV4','VO1','VO2','LO1','LO2','TO1','TO2'};
 
-load(fullfile(gammaModelDataPath,'ECoG_pRF',[int2str(subj_nr) '_pRFbb_chan' int2str(elec) '.mat']));
+% load(fullfile(gammaModelDataPath,'ECoG_pRF',[int2str(subj_nr) '_pRFbb_chan' int2str(elec) '.mat']));
 
 switch subj_nr
 
@@ -62,7 +62,27 @@ switch subj_nr
             case 46
                 v_area = 2;%v1 ventral
         end
+     case 1001
+        switch elec
+            case 37
+                v_area = 4;%v3 dorsal
+            case 49
+                v_area = 3;%v2 ventral
+            case 50
+                v_area = 3;%v2 ventral
+            case 51
+                v_area = 2;%v1 dorsal
+            case 52
+                v_area = [2 3];%v1/2 ventral
+            case 57
+                v_area = [3];%v2 ventral
+            case 58
+                v_area = [2];%v1 ventral
+            case 59
+                v_area = [2];%v1 ventral
+            case 60
+                v_area = [2 3];%v1/2 ventral
+        end
 end
 
-    
     

@@ -79,7 +79,7 @@ stimuliFilt = applymultiscalegaborfilters(reshape(stimulus,270*270,[])', ...
 %% 2. Squaring and summing across phases to get complex cell energy.
 
 stimuliEnergy = sqrt(blob(stimuliFilt.^2,2,2)); % quadrature pairs
-
+numOrientations = filt_prop.orientations;
 % Now to make a figure of the energy for each orientation for one image,
 % one can use:
 figure('Position',[0 0 1200 300]), 
