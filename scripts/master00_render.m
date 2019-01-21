@@ -1,4 +1,8 @@
-clear all
+
+% This script renders the cortices with or without visual maps with
+% electrodes.
+%
+% dhermes 2018 UMC Utrecht
 
 % set paths:
 gammaModelCodePath;
@@ -8,31 +12,23 @@ dataDir = gammaModelDataPath;
 addpath('/Users/dora/Documents/git/ecogBasicCode/render/')
 addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
-%% write gifti
+%% Write gifti in the space of the original MRI:
 
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
-hemi_2 = {'lh','lh','rh','rh'};
-s = 2;
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
+hemi_2 = {'lh','lh','rh','rh','rh'};
 
-if subjects(s)<10
-    subj = ['0' num2str(subjects(s))];
-else
-    subj = num2str(subjects(s));
-end
+% which subject to process
+s = 5;
 
-% %%% create a gifti file from a flywheel obj:
-[vertex,face] = read_obj([dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/' hemi_2{s} '.pial.obj']);
-g.vertices = vertex';
-g.faces = face';
-g.mat = eye(4,4);
-g = gifti(g);
-% %%% create a gifti file from the freesurfer pial:
-% or run mris_convert lh.pial lh.pial.gii in the terminal and read it with gifti(lh.pial.gii)
+subj = subjects{s};
+
+%%% load the gifti file created from the freesurfer pial by mris_convert lh.pial lh.pial.gii
+g = gifti(fullfile(dataDir,'derivatives','freesurfer',['sub-' subj],'surf',...
+    [hemi_2{s} '.pial.gii']));
 
 % covert to original space:
-mri_orig = ([dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/rt_sub000/mri/orig.mgz']);
+mri_orig = fullfile(dataDir,'derivatives','freesurfer',['sub-' subj],'mri','orig.mgz');
 orig = MRIread(mri_orig);
 Torig = orig.tkrvox2ras;
 Norig = orig.vox2ras;
@@ -46,49 +42,39 @@ vert_mat = vert_mat';
 g.vertices = vert_mat; clear vert_mat
 
 % save as a gifti
-gifti_name = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
+gifti_name = fullfile(dataDir,'derivatives','render',['sub-' subj],...
+    ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
 
 save(g,gifti_name,'Base64Binary')
 
 
 %% Render plain with used electrodes
+clear all
+dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
-els_NBF = {[107 108 109 115 120 121],'',[45 46],''};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
+els_gammaModel = {[107 108 109 115 120 121],'',[45 46],'',[49 50 52 57 58 59 60]};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
-for s = 3%1:length(subjects)
-    % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+for s = 1%1:length(subjects)
+    % subject code    
+    subj = subjects{s};
     
-    % electrode locations name:
-    dataLocName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','ieeg',...
-        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
     % gifti file name:
-    dataGiiName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','anat',...
-        ['/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
-    % first data run - to get good channels:
-    dataName = fullfile(dataDir,'soc_bids',['/sub-' subj],'/ses-01/','ieeg',...
-        ['/sub-' subj '_ses-01_task-soc_run-01_ieeg_preproc.mat']);
-    
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
     % load electrode locations
     loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
     elecmatrix = [loc_info.x loc_info.y loc_info.z];
 
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load(dataName);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
     
     % figure with rendering for different viewing angles
     for k = 1:size(v_dirs,1) % loop across viewing angles
@@ -101,55 +87,45 @@ for s = 3%1:length(subjects)
         figure
         ecog_RenderGifti(g) % render
 %         ecog_Label(els,30,12) % add electrode positions
-        el_add(els(els_NBF{s},:),'k',30) % add electrode positions
+        el_add(els(els_gammaModel{s},:),'k',30) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
         
-        set(gcf,'PaperPositionMode','auto')
-        print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','render',...
-            ['subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))]))
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','render',['sub-' subj],...
+%             ['subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))]))
 
         % close all
     end
 end
 
 
-%% Render plain with electrodes
+%% Render plain with all electrodes
 
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
 for s = 1%1:length(subjects)
-    % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+    % subject code  
+    subjects{s};
     
-    % electrode locations name:
-    dataLocName = [dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_acq-corrected_electrodes.tsv'];
     % gifti file name:
-    dataGiiName = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
-    % first data run - to get good channels:
-    dataName = dir([dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-*_run-*_ieeg_preproc.mat']);
-    
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
     % load electrode locations
     loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
     elecmatrix = [loc_info.x loc_info.y loc_info.z];
 
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load([dataRootPath '/sub-' subj '/ses-01/ieeg/' dataName(1).name]);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
     
     % figure with rendering for different viewing angles
     for k = 1%:size(v_dirs,1) % loop across viewing angles
@@ -169,13 +145,13 @@ for s = 1%1:length(subjects)
     end
 end
 
-%% Render Wang/Kastner with electrodes
+%% Render Wang/Kastner with all electrodes
 
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
 hemi_s = {'l','l','r','r'};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
@@ -187,41 +163,32 @@ Wang_ROI_Names = {...
 
 for s = 1%1:length(subjects)
     % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+    subj = subjects{s};
     
-    % electrode locations name:
-    dataLocName = [dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_acq-corrected_electrodes.tsv'];
     % gifti file name:
-    dataGiiName = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
-    % first data run - to get good channels:
-    dataName = dir([dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-*_run-*_ieeg_preproc.mat']);
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
+    % load electrode locations
+    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
+    elecmatrix = [loc_info.x loc_info.y loc_info.z];
+    
     % surface labels 
-    surface_labels_name = [dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/rt_sub000/surf/' hemi_s{s} 'h.wang2015_atlas.mgz'];
+    surface_labels_name = fullfile(dataRootPath,'derivatives','freesurfer',['sub-' subj],'surf',...
+        [hemi_s{s} 'h.wang15_mplbl.mgz']);
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
 
     % cmap = 'lines';
     cmap = lines(max(vert_label));
     
-    % load electrode locations
-    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
-    elecmatrix = [loc_info.x loc_info.y loc_info.z];
-
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load([dataRootPath '/sub-' subj '/ses-01/ieeg/' dataName(1).name]);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
-    
     % figure with rendering for different viewing angles
-    for k = 1:size(v_dirs,1) % loop across viewing angles
+    for k = 1%:size(v_dirs,1) % loop across viewing angles
         v_d = v_dirs(k,:);
         
         % make sure electrodes pop out
@@ -235,8 +202,8 @@ for s = 1%1:length(subjects)
         ecog_Label(els,30,12) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
         set(gcf,'PaperPositionMode','auto')
-        print('-dpng','-r300',['./figures/render/Wang_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-        close all
+%         print('-dpng','-r300',['./figures/render/Wang_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
+%         close all
     end
 end
 
@@ -246,51 +213,43 @@ end
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
 hemi_s = {'l','l','r','r'};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
-Benson_Area_Names = {'V1' 'V2' 'V3'};
+Benson_Area_Names = {'V1','V2','V3','hV4','V01','V02','V3a','V3b','LO1','LO2','TO1','T02'};
 
 for s = 1%1:length(subjects)
     % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+    subj = subjects{s};
     
-    % electrode locations name:
-    dataLocName = [dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_acq-corrected_electrodes.tsv'];
     % gifti file name:
-    dataGiiName = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
-    % first data run - to get good channels:
-    dataName = dir([dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-*_run-*_ieeg_preproc.mat']);
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
+    % load electrode locations
+    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
+    elecmatrix = [loc_info.x loc_info.y loc_info.z];
+    
     % surface labels 
-    surface_labels_name = [dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/rt_sub000/surf/' hemi_s{s} 'h.template_areas.mgz'];
+    surface_labels_name = fullfile(dataRootPath,'derivatives','freesurfer',['sub-' subj],'surf',...
+        [hemi_s{s} 'h.benson14_varea.mgz']);
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
 
     % cmap = 'lines';
     cmap = lines(max(vert_label));
     
-    % load electrode locations
-    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
-    elecmatrix = [loc_info.x loc_info.y loc_info.z];
-
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load([dataRootPath '/sub-' subj '/ses-01/ieeg/' dataName(1).name]);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
     
     % figure with rendering for different viewing angles
-    for k = 1:size(v_dirs,1) % loop across viewing angles
+    for k = 1%:size(v_dirs,1) % loop across viewing angles
         v_d = v_dirs(k,:);
         
         % make sure electrodes pop out
@@ -303,9 +262,9 @@ for s = 1%1:length(subjects)
 %         ecog_RenderGifti(g) % render
         ecog_Label(els,30,12) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
-        set(gcf,'PaperPositionMode','auto')
-        print('-dpng','-r300',['./figures/render/BensonAreas_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-        close all
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-dpng','-r300',['./figures/render/BensonAreas_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
+%         close all
     end
 end
    
@@ -315,47 +274,38 @@ end
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
 hemi_s = {'l','l','r','r'};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
 for s = 1%1:length(subjects)
     % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+    subj = subjects{s};
     
-    % electrode locations name:
-    dataLocName = [dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_acq-corrected_electrodes.tsv'];
     % gifti file name:
-    dataGiiName = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
-    % first data run - to get good channels:
-    dataName = dir([dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-*_run-*_ieeg_preproc.mat']);
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
+    % load electrode locations
+    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
+    elecmatrix = [loc_info.x loc_info.y loc_info.z];
+    
     % surface labels 
-    surface_labels_name = [dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/rt_sub000/surf/' hemi_s{s} 'h.template_eccen.mgz'];
+    surface_labels_name = fullfile(dataRootPath,'derivatives','freesurfer',['sub-' subj],'surf',...
+        [hemi_s{s} 'h.benson14_eccen.mgz']);
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
 
     % cmap = 'lines';
     cmap = hsv(ceil(max(vert_label)));
     Benson_Eccen_Names = [1:ceil(max(vert_label))];
-    
-    % load electrode locations
-    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
-    elecmatrix = [loc_info.x loc_info.y loc_info.z];
-
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load([dataRootPath '/sub-' subj '/ses-01/ieeg/' dataName(1).name]);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
     
     % figure with rendering for different viewing angles
     for k = 1:size(v_dirs,1) % loop across viewing angles
@@ -371,8 +321,8 @@ for s = 1%1:length(subjects)
 %         ecog_RenderGifti(g) % render
         ecog_Label(els,30,12) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
-        set(gcf,'PaperPositionMode','auto')
-        print('-dpng','-r300',['./figures/render/BensonEccen_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-dpng','-r300',['./figures/render/BensonEccen_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
         close all
     end
 end
@@ -383,47 +333,39 @@ end
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
-subjects = [19,23,24,9];
-hemi = {'L','L','R','R'};
+subjects = {'19','23','24','9','1001'};
+hemi = {'L','L','R','R','R'};
 hemi_s = {'l','l','r','r'};
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
 for s = 1%1:length(subjects)
     % subject code
-    if subjects(s)<10
-        subj = ['0' num2str(subjects(s))];
-    else
-        subj = num2str(subjects(s));
-    end
+    subj = subjects{s};
     
-    % electrode locations name:
-    dataLocName = [dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_acq-corrected_electrodes.tsv'];
     % gifti file name:
-    dataGiiName = [dataRootPath '/sub-' subj '/ses-01/anat/sub-' subj '_T1w_pial.' hemi{s} '.surf.gii'];
-    % first data run - to get good channels:
-    dataName = dir([dataRootPath '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-*_run-*_ieeg_preproc.mat']);
+    dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_T1w_pial.' hemi{s} '.surf.gii']);
+    % load gifti:
+    g = gifti(dataGiiName);
+
+    % electrode locations name:
+    dataLocName = fullfile(dataRootPath,['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_acq-corrected_electrodes.tsv']);
+    % load electrode locations
+    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
+    elecmatrix = [loc_info.x loc_info.y loc_info.z];
+    
     % surface labels 
-    surface_labels_name = [dataRootPath '/sub-' subj '/ses-01/derivatives/RetinotopyTemplates/rt_sub000/surf/' hemi_s{s} 'h.template_angle.mgz'];
+    surface_labels_name = fullfile(dataRootPath,'derivatives','freesurfer',['sub-' subj],'surf',...
+        [hemi_s{s} 'h.benson14_angle.mgz']);
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
-
+    
     % cmap = 'lines';
     cmap = hsv(ceil(max(vert_label)));
     Benson_Angle_Names = [1:ceil(max(vert_label))];
     
-    % load electrode locations
-    loc_info = readtable(dataLocName,'FileType','text','Delimiter','\t','TreatAsEmpty',{'N/A','n/a'});
-    elecmatrix = [loc_info.x loc_info.y loc_info.z];
-
-    % load gifti:
-    g = gifti(dataGiiName);
-
-    % load channel info - do not plot bad channels in rendering
-    load([dataRootPath '/sub-' subj '/ses-01/ieeg/' dataName(1).name]);
-
-    % remove bad channels (replace with NaN)
-    elecmatrix(exclude_channels,:) = NaN;
     
     % figure with rendering for different viewing angles
     for k = 1:size(v_dirs,1) % loop across viewing angles
@@ -439,8 +381,8 @@ for s = 1%1:length(subjects)
 %         ecog_RenderGifti(g) % render
         ecog_Label(els,30,12) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
-        set(gcf,'PaperPositionMode','auto')
-        print('-dpng','-r300',['./figures/render/BensonAngle_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-dpng','-r300',['./figures/render/BensonAngle_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
         close all
     end
 end

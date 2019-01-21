@@ -286,7 +286,11 @@ for ll = 1:length(electrodes)
     xlim([0 87]), ylim(ylims(1,:))
     set(gca,'XTick',[])
     ylabel('gamma')
-
+    
+    % plot model performance
+    r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
+    title(['el ' int2str(elec) ': r^2=' int2str(r2)])
+    
     %%% LOOK AT WHERE THE GAUSSIAN IS
     subplot(8,5,5*ll)
     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
