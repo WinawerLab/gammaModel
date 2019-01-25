@@ -58,7 +58,7 @@ els_gammaModel = {[107 108 109 115 120 121],'',[45 46],'',[49 50 52 57 58 59 60]
 
 v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
 
-for s = 1%1:length(subjects)
+for s = 5%1:length(subjects)
     % subject code    
     subj = subjects{s};
     
@@ -107,11 +107,12 @@ dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 subjects = {'19','23','24','9','1001'};
 hemi = {'L','L','R','R','R'};
 
-v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
+v_dirs = [270 0;90 0;90 -60;270 -60;90 0];
+v_dirs = [270 0;90 0;90 -60;270 -60;-60 -15];
 
-for s = 1%1:length(subjects)
+for s = 5%1:length(subjects)
     % subject code  
-    subjects{s};
+    subj = subjects{s};
     
     % gifti file name:
     dataGiiName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
@@ -128,21 +129,19 @@ for s = 1%1:length(subjects)
 
     
     % figure with rendering for different viewing angles
-    for k = 1%:size(v_dirs,1) % loop across viewing angles
-        v_d = v_dirs(k,:);
-        
-        % make sure electrodes pop out
-        a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-        els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
+    v_d = v_dirs(s,:);
 
-        figure
-        ecog_RenderGifti(g) % render
-        ecog_Label(els,30,12) % add electrode positions
-        ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
-        set(gcf,'PaperPositionMode','auto')
+    % make sure electrodes pop out
+    a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
+    els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
+
+    figure
+    ecog_RenderGifti(g) % render
+    ecog_Label(els,30,12) % add electrode positions
+    ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
+    set(gcf,'PaperPositionMode','auto')
 %         print('-dpng','-r300',['../figures/render/subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-        close all
-    end
+%         close all
 end
 
 %% Render Wang/Kastner with all electrodes
@@ -302,13 +301,18 @@ for s = 1%1:length(subjects)
         [hemi_s{s} 'h.benson14_eccen.mgz']);
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
-
-    % cmap = 'lines';
-    cmap = hsv(ceil(max(vert_label)));
+    
+    % colormap:
+    [cm,cm_angle,cm_eccen] = make_BensonColormap();
+    cmap = cm_eccen; % or try a standard map like hsv(ceil(max(vert_label)));
     Benson_Eccen_Names = [1:ceil(max(vert_label))];
     
+    % multiply vert_label times 4 to use range from 1-90 to 1-360 to use
+    % the entire colormap
+    vert_label = vert_label*4;
+    
     % figure with rendering for different viewing angles
-    for k = 1:size(v_dirs,1) % loop across viewing angles
+    for k = 1%:size(v_dirs,1) % loop across viewing angles
         v_d = v_dirs(k,:);
         
         % make sure electrodes pop out
@@ -323,7 +327,7 @@ for s = 1%1:length(subjects)
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
 %         set(gcf,'PaperPositionMode','auto')
 %         print('-dpng','-r300',['./figures/render/BensonEccen_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-        close all
+%         close all
     end
 end
 
@@ -362,10 +366,9 @@ for s = 1%1:length(subjects)
     surface_labels = MRIread(surface_labels_name);
     vert_label = surface_labels.vol(:);
     
-    % cmap = 'lines';
-    cmap = hsv(ceil(max(vert_label)));
+    [cm,cm_angle,cm_eccen] = make_BensonColormap();
+    cmap = cm_angle;%hsv(ceil(max(vert_label)));
     Benson_Angle_Names = [1:ceil(max(vert_label))];
-    
     
     % figure with rendering for different viewing angles
     for k = 1:size(v_dirs,1) % loop across viewing angles
@@ -383,7 +386,7 @@ for s = 1%1:length(subjects)
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
 %         set(gcf,'PaperPositionMode','auto')
 %         print('-dpng','-r300',['./figures/render/BensonAngle_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-        close all
+%         close all
     end
 end
 

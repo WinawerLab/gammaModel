@@ -22,13 +22,13 @@ subjects = {'19','24','1001'};
 hemi = {'L','R','R'};
 hemi_s = {'l','r','r'};
 
-v_dirs = [64 -23;270 0;-45 -30]; % nice viewing angle for each subject
+v_dirs = [64 -23;270 0;-60 -15]; % nice viewing angle for each subject
 
 electrodes = {[107 108 109 115 120 121],[45 46],[49 50 52 57 58 59 60]};
 
 Benson_Area_Names = {'V1','V2','V3','hV4','V01','V02','V3a','V3b','LO1','LO2','TO1','T02'};
 
-for s = 3%1:length(subjects)
+for s = 3:length(subjects)
     % subject code
     subj = subjects{s};
     
@@ -64,11 +64,11 @@ for s = 3%1:length(subjects)
     figure
     ecog_RenderGiftiLabels(g,vert_label,cmap,Benson_Area_Names)
 
-    el_add(els(electrodes{s},:),[.99 .99 .99],20) % add electrode positions
-    el_add(els(electrodes{s},:),'k',15) % add electrode positions
+    el_add(els(electrodes{s},:),[.99 .99 .99],40) % add electrode positions
+    el_add(els(electrodes{s},:),'k',30) % add electrode positions
     ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
     set(gcf,'PaperPositionMode','auto')
-%     print('-dpng','-r300',fullfile(dataDir,'derivatives','render',['sub-' subj],...
-%         ['sub-' subj '_BensonAreas__v' int2str(v_d(1)) '_' int2str(v_d(2))]))
+    print('-dpng','-r300',fullfile(dataDir,'derivatives','render',['sub-' subj],...
+        ['sub-' subj '_BensonAreas__v' int2str(v_d(1)) '_' int2str(v_d(2))]))
 end
    

@@ -80,9 +80,8 @@ end
 
 
 %% test fitting, in one electrode, few stimuli:
-% channels to plot (s1: 108 | s2: 53 54 | s3: 45 46):
-
-elec = 109;
+% channels to plot (s1: 108 | s2: 53 54 | s3: 45 46 | s4: 49 50 52 57 58 59 60);
+elec = 42;
 
 data_fft = squeeze(spectra(elec,:,:));
 data_fft_off = squeeze(spectra_off(elec,:,:));
@@ -157,7 +156,7 @@ for k = 1:length(stims_plot)
 %     plot(f,data_fit,'Color',stims_color{k},'LineWidth',1)
 end
 
-% xlim([30 200]),ylim([10.^-1.5 10.^2.5])
+xlim([30 200]),ylim([10.^-1.5 10.^2])
 % xlim([30 200]),ylim([10.^-2 10.^1.6])
 set(gca,'XTick',[50 100 200],...
     'YTick',[10.^-1 10.^0 10.^1 10.^2])
@@ -165,9 +164,9 @@ set(gca,'xscale','log','yscale','log','TickLength',[0.05 .1])
 xlabel('Frequency (Hz)'),ylabel('Power')
 
 set(gcf,'PaperPositionMode','auto')
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+print('-dpng','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','spectra','fit',...
+print('-depsc','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
     ['fitSpectra_sub-' int2str(subj) '_el'  int2str(elec) '_stim' int2str(stims_plot(1))]))
 
 %%

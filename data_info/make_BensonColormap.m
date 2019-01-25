@@ -1,10 +1,12 @@
-function cm = make_BensonColormap()
+function [cm,cm_angle,cm_eccen] = make_BensonColormap()
 
 % This colormap was made using linspecer:
 % Beautiful and distinguishable line colors + colormap
 % version 1.4.0.0 (8.25 KB) by Jonathan C. Lansey
 % and then made darker/lighter for a cortical surface
 % and then shuffled to make sure adjacent maps differ in color
+%
+% dhermes, 2019 UMC Utrecht
 
 % Benson_Area_Names = {'V1','V2','V3','hV4','V01','V02','V3a','V3b','LO1','LO2','TO1','T02'};
 
@@ -22,8 +24,6 @@ cm = [...
     0.8206    0.2239    0.3094
     0.9    0.6    1];
 
-
-
 % % Benson ELife 2018 colors areas:
 % cm = [...
 %     1,0,0;...%V1
@@ -38,53 +38,26 @@ cm = [...
 %     0.5,0,1;...'LO2'
 %     1,0,0.5;...'TO1'
 %     0.5,0,0.5];%'TO2'
-    
 
-% Benson 2018 ELife colors angle
-% cmap_polar_angle is a colormap for plotting the pRF polar angle of a vertex.
-% Values passed to cmap_polar_angle should be scaled such that (-180,180 deg) -> (0,1).
-cmap_polar_angle = [...
-    0.5,0,0;...
-    1,0,1;...
-    0,0,0.5;...
-    0,1,1;...
-    0,0.5,0;...
-    1,1,0;...
-    0.5,0,0];
+% Benson 2018 ELife colors angle, but one hemisphere from 1:180
 cm_angle = zeros(180,3);
-cm_angle(1:)
--180°,-135°,-90°,-45°,0°,45°,90°,135°,180° 
-
+cm_angle(1:45,:) = [zeros(45,1),(0:1/44:1)',(0.5:0.5/44:1)'];
+cm_angle(46:90,:) = [zeros(45,1),(1:-.5/44:.5)',(1:-1/44:0)'];
+cm_angle(91:135,:) = [(0:1/44:1)',(0.5:0.5/44:1)',zeros(45,1)];
+cm_angle(136:180,:) = [(1:-.5/44:.5)',(1:-1/44:0)',zeros(45,1)];
 
 % Benson 2018 ELife colors eccentricity 
+% In my rendering functions, the colors are rounded to integers, so in
+% order to plot 1.25 as different from 1.5, we have to use a colormap that
+% is 4x longer than the data values, here: 90*4 = 360. An eccentricity of 1
+% should be plotted with the index of 4 etc..
+cm_eccen = zeros(360,3);
+cm_eccen(1:5,:) = [zeros(5,1),zeros(5,1),(0:0.5/4:.5)'];%1.25*4 = 5
+cm_eccen(6:10,:) = [(0:1/4:1)',zeros(5,1),(.5:0.5/4:1)'];%2.5*4 = 10
+cm_eccen(11:20,:) = [(1:-.5/9:.5)',zeros(10,1),(1:-1/9:0)'];%5*4 = 20
+cm_eccen(21:40,:) = [(.5:.5/19:1)',(0:1/19:1)',zeros(20,1)];%10*4 = 40
+cm_eccen(41:80,:) = [(1:-1/39:0)',(1:-0.5/39:0.5)',zeros(40,1)];%20*4 = 80
+cm_eccen(81:160,:) = [zeros(80,1),(.5:0.5/79:1)',(0:1/79:1)'];%40*4 = 160
+cm_eccen(161:360,:) = [(0:1/199:1)',ones(200,1),ones(200,1)];%161:360
 
-cmap_eccentricity = blend_cmap(
-        'eccentricity',
-        [(0,       (  0,  0,  0)),
-         (1.25/90, (  0,  0,0.5)),
-         (2.5/90,  (  1,  0,  1)),
-         (5.0/90,  (0.5,  0,  0)),
-         (10.0/90, (  1,  1,  0)),
-         (20.0/90, (  0,0.5,  0)),
-         (40.0/90, (  0,  1,  1)),
-         (1,       (  1,  1,  1))])
-    cmap_eccentricity.__doc__ = '''
-    cmap_eccentricity is a colormap for plotting the pRF eccentricity of a vertex.
-    Values passed to cmap_eccentricity should be scaled such that (0,90 deg) -> (0,1).
-    '''
-    cmap_log_eccentricity = blend_cmap(
-        'log_eccentricity',
-        [(0,     (  0,  0,  0)),
-         (1.0/7, (  0,  0,0.5)),
-         (2.0/7, (  1,  0,  1)),
-         (3.0/7, (0.5,  0,  0)),
-         (4.0/7, (  1,  1,  0)),
-         (5.0/7, (  0,0.5,  0)),
-         (6.0/7, (  0,  1,  1)),
-         (1,     (  1,  1,  1))])
-    cmap_log_eccentricity.__doc__ = '''
-    cmap_log_eccentricity is a colormap for plotting the log of eccentricity.
-    Values passed to cmap_log_cmag should be scaled however desired, but note that the colormap
-    itself runs linearly from 0 to 1, so eccentricity data should be log-transformed
-    then scaled before being passed.
              

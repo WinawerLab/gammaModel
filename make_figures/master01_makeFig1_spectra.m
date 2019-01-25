@@ -110,10 +110,10 @@ for s = 1:length(subjects)
     xlabel('Frequency (Hz)'),ylabel('Power')
 end
 
-set(gcf,'PaperPositionMode','auto')
-print('-dpng','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
-    ['fitSpectra_all_stim' int2str(stims_plot(1))]))
-print('-depsc','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
-    ['fitSpectra_all_stim' int2str(stims_plot(1))]))
+% set(gcf,'PaperPositionMode','auto')
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
+%     ['fitSpectra_all_stim' int2str(stims_plot(1))]))
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','spectra','fit',...
+%     ['fitSpectra_all_stim' int2str(stims_plot(1))]))
 
 
