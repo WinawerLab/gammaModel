@@ -66,7 +66,7 @@ title('Stimulus');
 filt_prop.cycles = 60*(270/240);    %   the number of cycles per image is 60*(270/240)
 filt_prop.bandwidth = -1;           %   the spatial frequency bandwidth of the filters is 1 octave
 filt_prop.spacings=1;               %   the separation of adjacent filters is 1 std dev of the Gaussian envelopes
-                                    %     (this results in a 90 x 90 grid of positions)
+                                    %     (this results in a 135 x 135 grid of positions)
 filt_prop.orientations=8;           %   filters occur at 8 orientations
 filt_prop.phases=2;                 %   filters occur at 2 phases (between 0 and pi)
 filt_prop.thres=0.01;               %   the Gaussian envelopes are thresholded at .01
@@ -88,7 +88,6 @@ stimulus = sqrt(blob(stimulus.^2,2,2)); % quadrature pairs
 numOrientations = 8;
 
 res = sqrt(size(stimulus,2)/numOrientations);
-
 
 % Now to view an image, one can use:
 inNr = 12;
