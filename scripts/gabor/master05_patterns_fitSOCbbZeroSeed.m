@@ -15,7 +15,7 @@ addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 %% Load preprocessed images and divisive normalization:
 
-load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
 
 % compute the square root of the sum of the squares of the outputs of
 % quadrature-phase filter pairs (this is the standard complex-cell energy model).
@@ -249,21 +249,26 @@ print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fi
 print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
-%% Figure all subjects
+%% Figure all electrodes all subjects
 
-%%%%% Pick a subject:
-subject_ind = [19 19  19  19  19  19  24 24];
-electrodes = [107 108 109 115 120 121 45 46];
-% subject_ind = [1001 1001 1001 1001 1001 1001 1001 1001 1001];
-% electrodes = [49 50 51 52 57 58 59 60];
+%%%%% Subjects/electrodes:
+subject_ind = [19 19 19 19 19 19  ... % S1
+    24 24 ... % S2
+    1001 1001 1001 1001 1001 1001 1001 1001]; % S3
+electrodes = [107 108 109 115 120 121 ... % S1
+    45 46 ... % S2
+    49 50 52 57 58 59 60]; % S3
 
 socParams_all = zeros(length(electrodes),6);
 socCOD_all = zeros(length(electrodes),2);
 
-figure('Position',[0 0 600 700])
-    
+plot_nr = 0;   
 for ll = 1:length(electrodes)
-    
+    plot_nr = plot_nr + 1;
+    if mod(ll,8)==1 % make a new figure for after 8 electrodes
+        figure('Position',[0 0 600 700])
+        plot_nr = 1;
+    end
     subj = subject_ind(ll);
     elec = electrodes(ll);
     
@@ -273,13 +278,13 @@ for ll = 1:length(electrodes)
     res = sqrt(size(imEnergyMean,2));
 
     % load model fit
-    load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-        'xys_pix','seeds',...
+        'seeds',...
         'cross_SOCparams','cross_SOCestimate')
 
     % load ecog data:
-    dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
@@ -291,7 +296,7 @@ for ll = 1:length(electrodes)
         squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
     
     %%% PLOT BROADBAND POWER AND SOC FIT
-    subplot(8,5,5*ll-4:5*ll-1),hold on
+    subplot(8,1,plot_nr),hold on
     bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_bb_err,'k');
     plot(cross_SOCestimate' ,'r','LineWidth',2)
@@ -306,33 +311,6 @@ for ll = 1:length(electrodes)
     set(gca,'XTick',[])
     xlim([0 87])
     ylabel(['bb el ' int2str(elec)])
-
-%     %%% LOOK AT WHERE THE GAUSSIAN IS
-%     subplot(8,5,5*ll)
-%     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
-%     imagesc(ones(size(xx)),[0 1]);
-%     axis image, hold on, colormap gray
-%     plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
-%     %%% plot prf from bar/CSS model
-%     % gau = makegaussian2d(res,xys_pix(1),xys_pix(2),xys_pix(3),xys_pix(3),xx,yy,0,0);
-%     % imagesc(gau);
-%     % axis image, hold on, colorbar
-%     % look at the prf from the SOC fit:
-%     numPoints = 50;
-%     c.th = linspace(0,2*pi, numPoints);
-%     for kk = 1:size(cross_SOCparams,1)
-%         [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*cross_SOCparams(kk,3)./sqrt(cross_SOCparams(kk,5)));
-%         plot(c.x + cross_SOCparams(kk,2), c.y + cross_SOCparams(kk,1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-%     end
-%     axis off
-
-%     %%% PLOT SCATTERPLOT DATA VS PREDICTION
-%     subplot(8,5,5*ll),hold on
-%     plot(ylims(1,:),ylims(1,:),'Color',[.5 .5 .5])
-%     plot(cross_SOCestimate,ecog_bb,'k.');
-%     xlim(ylims(1,:))
-%     ylim(ylims(1,:))
-%     axis square, box off
 
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
@@ -351,11 +329,11 @@ end
 % print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
 %         [analysisType '_allel_' modelType]))
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType '_onlyfit']))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-        [analysisType '_allel_' modelType '_onlyfit']))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit']))
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+%         [analysisType '_allel_' modelType '_onlyfit']))
 
 % set(gcf,'PaperPositionMode','auto')
 % print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...

@@ -39,14 +39,17 @@ for data_nr = 1:nr_runs
     %%%% notch filter data at 60, 120 and 180 Hz
     if isequal(subj,'19')
         data = ecog_notch(data',srate,60);
+        data = data';
     elseif isequal(subj,'23')
         data = ecog_notch(data',srate,60);
+        data = data';
     elseif isequal(subj,'24')
         data = ecog_notch(data',srate,60);
+        data = data';
     elseif isequal(subj,'1001')
-        data = ecog_notch(data',srate,50);
+        disp('no notch, fix 50 Hz notch...')
     end    
-    data = data';
+    
     
     %%%% make epochs
     onset_trial = round(stim.onset*srate);%from seconds to samples
@@ -73,15 +76,15 @@ for data_nr = 1:nr_runs
 end
 
 data_epoch = data_epoch_all;
-clear data_epoch_all data
+% clear data_epoch_all data
 
 
 %%
 %% Plot ersp for an electrode and some stimuli
 %%
-% electrodes = [49 50 52 57 58 59 60]; % S1001 V1, V2, V3
 
-elec = 57; 
+% electrodes = [49 50 52 57 58 59 60]; % S1001 V1, V2, V3
+elec = 50; 
 
 conds_plot = {[45],[83],87};
 % conds_plot = {39,40,41,42,43,44,45,46,87}; % orientation
@@ -138,8 +141,7 @@ for kk = 1:length(conds_plot)
 end
 
 colorbar
-% 
-% 
+
 % set(gcf,'PaperPositionMode','auto')
 % print('-dpng','-r300',fullfile(dataDir,'derivatives','spectra','timefreq',...
 %     ['ersp_sub-' subj '_el' int2str(elec) '_stim' int2str(conds_plot{1})]))
