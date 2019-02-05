@@ -262,13 +262,12 @@ electrodes = [107 108 109 115 120 121 ... % S1
 socParams_all = zeros(length(electrodes),6);
 socCOD_all = zeros(length(electrodes),2);
 
-plot_nr = 0;   
+plot_nr = 0; 
+figure_nr = 1;
+figure('Position',[0 0 470 600])
 for ll = 1:length(electrodes)
     plot_nr = plot_nr + 1;
-    if mod(ll,8)==1 % make a new figure for after 8 electrodes
-        figure('Position',[0 0 600 700])
-        plot_nr = 1;
-    end
+
     subj = subject_ind(ll);
     elec = electrodes(ll);
     
@@ -310,7 +309,6 @@ for ll = 1:length(electrodes)
     end
     set(gca,'XTick',[])
     xlim([0 87])
-    ylabel(['bb el ' int2str(elec)])
 
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
@@ -320,29 +318,148 @@ for ll = 1:length(electrodes)
 
     socCOD_all(ll,1) = calccod(cross_SOCestimate,ecog_bb,[],0,1);
     socCOD_all(ll,2) = calccod(cross_SOCestimate,ecog_bb,[],0,0);
-    title(['R^2 = ' int2str(socCOD_all(ll,2))])
+    
+    ylabel(['el' int2str(elec) ' R^2=' int2str(socCOD_all(ll,2))])
+
+    if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
+        % save the figure
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+
+        % and make a new figure
+        figure_nr = figure_nr +1;
+        figure('Position',[0 0 470 600])
+        % reset the subplot number
+        plot_nr = 0;
+        
+    elseif ll==length(electrodes)% save figure after last electrode
+        % save the last figure
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+    end
 end
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType]))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType]))
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
-% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit']))
+%% Figure 3: example electrodes + average across subjects.
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_SubChaam']))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_SubChaam']))
+% Get average broadband across all electrodes/subjects:
+%%%%% Subjects/electrodes:
+subject_ind = [19 19 19 19 19 19  ... % S1
+    24 24 ... % S2
+    1001 1001 1001 1001 1001 1001 1001 1001]; % S3
+electrodes = [107 108 109 115 120 121 ... % S1
+    45 46 ... % S2
+    49 50 52 57 58 59 60]; % S3
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
-% print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
-%         [analysisType '_allel_' modelType '_onlyfit_SubChaam']))
+% initialize parameters across subjects
+socParams_all = zeros(length(electrodes),6);
+socCOD_all = zeros(length(electrodes),2);
+SOCestimate_all = zeros(length(electrodes),86);
+ecog_bb_all = zeros(length(electrodes),86);
+ecog_bb_err_all = zeros(length(electrodes),2,86);
+
+% Get average broadband across all electrodes/subjects:
+for ll = 1:length(electrodes)
+    plot_nr = plot_nr + 1;
+
+    subj = subject_ind(ll);
+    elec = electrodes(ll);
+    
+    analysisType = 'spectra200';
+    modelType = 'fitSOCbbpower2';
+
+    res = sqrt(size(imEnergyMean,2));
+
+    % load model fit
+    load(fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+        ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
+        'seeds',...
+        'cross_SOCparams','cross_SOCestimate')
+
+    % load ecog data:
+    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
+        'ses-01','derivatives','ieeg',...
+        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+    load(dataFitName)
+
+    % get ecog power percent signal change
+    bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
+    ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
+    ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
+        squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);   
+    ecog_bb_all(ll,:) = ecog_bb;
+    ecog_bb_err_all(ll,:,:) = ecog_bb_err;
+    
+    % get mean model parameters and plot prediction
+    cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
+    cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange at 1
+    cross_SOCparams(:,3) = abs(cross_SOCparams(:,3)); % size>0
+    % write out median model parameters across 86 leave 1 outs
+    socParams_all(ll,:) = median(cross_SOCparams);
+
+    % write out coefficient of determination
+    socCOD_all(ll,1) = calccod(cross_SOCestimate,ecog_bb,[],0,1); % subtract mean 
+    socCOD_all(ll,2) = calccod(cross_SOCestimate,ecog_bb,[],0,0); % predict mean + variance
+
+    % write out leave 1 out estimate across electrodes 
+    SOCestimate_all(ll,:) = cross_SOCestimate;
+end
+
+%%
+% plot example electrodes and average across electrodes
+% example electrodes
+example_els = [3 5 7 8 9 14];
+
+figure('Position',[0 0 470 600])
+for ll = 1:length(example_els)
+    elec = electrodes(example_els(ll));
+    
+    %%% PLOT BROADBAND POWER AND SOC FIT
+    subplot(8,1,ll),hold on
+    bar(ecog_bb_all(example_els(ll),:),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    plot([1:86; 1:86],squeeze(ecog_bb_err_all(example_els(ll),:,:)),'k');
+    plot(SOCestimate_all(example_els(ll),:)','r','LineWidth',2)
+    % set ylim
+    ylims = [min(min(ecog_bb_err_all(example_els(ll),:,:))) max(max(ecog_bb_err_all(example_els(ll),:,:)))];
+    ylim(ylims(1,:))
+    % plot stimulus cutoffs
+    stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
+    for k = 1:length(stim_change)
+        plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
+    end
+    set(gca,'XTick',[])
+    xlim([0 87])
+    ylabel(['el' int2str(elec) ' R^2=' int2str(socCOD_all(example_els(ll),2))])
+
+end
+
+% and plot the mean across electrodes
+subplot(8,1,7),hold on  
+bar(mean(ecog_bb_all,1),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0],'LineWidth',1);
+bb_group_err = std(ecog_bb_all,1)./sqrt(size(ecog_bb_all,1));
+bb_group_up = mean(ecog_bb_all,1)+1.96*bb_group_err;
+bb_group_low = mean(ecog_bb_all,1)-1.96*bb_group_err;
+plot([1:86; 1:86],[bb_group_up; bb_group_low],'k');
+% plot(mean(SOCestimate_all,1)','r','LineWidth',2)
+% plot stimulus cutoffs
+stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
+for k = 1:length(stim_change)
+    plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
+end
+set(gca,'XTick',[])
+xlim([0 87])
+ylabel(['average'])
+ylim([min(bb_group_low)-10 max(bb_group_up)+10])
+
+% save the figure
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+        ['Figure3_' analysisType '_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+        ['Figure3_' analysisType '_' modelType]))
