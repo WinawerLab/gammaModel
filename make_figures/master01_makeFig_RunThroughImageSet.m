@@ -31,7 +31,7 @@ addpath(genpath('~/Documents/m-files/knkutils'));
 %% %%%%%% START preprocess images %%%%%%%%
 %%
 
-% load images
+% Load natural images
 a1 = load(fullfile(dataDir,'stimuli','McGill_imageset','tempims.mat'));
 
 % plot one image:
@@ -41,6 +41,15 @@ im0 = (double(a1.ims(:,:,50))/255).^2;  % now in luminance values between 0-1
 figure; imagesc(sqrt(im0));
 colormap gray
 
+% % Load textures
+b1 = load(fullfile(dataDir,'stimuli','task-soc_stimuli.mat'),'stimuli');
+grating_100 = double(b1.stimuli(:,:,39))-127;
+grating_20 = double(b1.stimuli(:,:,50))-127;
+grating_10 = double(b1.stimuli(:,:,49))-127;
+grating_4 = double(b1.stimuli(:,:,48))-127;
+grating_2 = double(b1.stimuli(:,:,47))-127;
+% to look at relative contrast: 
+histogram(grating_100./grating_2); 
 
 %% %%%%%% preprocess images - part 1 is fast %%%%%%%%
 
@@ -243,9 +252,9 @@ for example_elec1 = 1:15
 end
  
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','natural',...
         ['NaturalImages_AllElectrodes']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
         ['NaturalImages_AllElectrodes']))
 
 
@@ -287,12 +296,12 @@ title('Natural Images')
 %%  Figure with SOC vs OV predictions for example electrodes (Figure 8)
 
 
-% example_elec1 = 3; 
-% example_images = [68 689];
+example_elec1 = 3; 
+example_images = [68 689];
 example_elec1 = 8; 
 example_images = [231 143];
-example_imcolors = {[0 0 1],[0 .8 .1]};
-figure('Position',[0 0 300 300]),hold on
+example_imcolors = {[.2 .2 1],[0 .8 .1]};
+figure('Position',[0 0 250 250]),hold on
 
 h = scatter(natural.SOC_estimates(:,example_elec1),natural.OV_estimates(:,example_elec1),25,[.2 .2 .2],'filled','MarkerFaceAlpha',.2);
 % add gratings:
@@ -317,7 +326,7 @@ ylabel('OV prediction')
 title(['El' int2str(example_elec1) ' Natural (gray) Gratings (red)'])
  
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','natural',...
         ['NaturalImages_ExampleEl' int2str(example_elec1)]))
 print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
         ['NaturalImages_ExampleEl' int2str(example_elec1)]))
@@ -353,7 +362,6 @@ for kk = 1:length(example_images)
     plot(c.x + orig_y, c.y + orig_x, 'Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
     [c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
     plot(c.x + orig_y, c.y + orig_x,'--','Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
-
 
     set(gcf,'PaperPositionMode','auto')
     print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
