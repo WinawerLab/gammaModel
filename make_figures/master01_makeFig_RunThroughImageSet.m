@@ -97,34 +97,35 @@ stimulus = applymultiscalegaborfilters(reshape(stimulus,270*270,[])', ...
 save(fullfile(dataDir,'derivatives','gaborFilt','McGill_imageset_gaborFilt01.mat'),'stimulus','filt_prop')
 
 %%
-%% figure of images with different orientations
+%% Load filtered images 
+%%
 
 % load filtered textures used in paper
 textures = load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus');
 
-% load natural images McGill set
-load(fullfile(dataDir,'derivatives','gaborFilt','McGill_imageset_gaborFilt01.mat'),'stimulus','filt_prop')
+% load filtered natural images McGill set
+natural = load(fullfile(dataDir,'derivatives','gaborFilt','McGill_imageset_gaborFilt01.mat'),'stimulus','filt_prop');
 
 % Calculate quadrature pairs: compute the square root of the sum of the
 % squares of the outputs of quadrature-phase filter pairs (this is the
 % standard complex-cell energy model). After this step, stimulus is images
 % x orientations*positions.
-stimulus = sqrt(blob(stimulus.^2,2,2)); % 
+natural.stimulus = sqrt(blob(natural.stimulus.^2,2,2)); % 
 textures.stimulus = sqrt(blob(textures.stimulus.^2,2,2)); 
 % --> stimulus is the input to the OV model
 
 % Resolution of natural image and textures is the same:
-res = sqrt(size(stimulus,2)/filt_prop.orientations);
+res = sqrt(size(natural.stimulus,2)/natural.filt_prop.orientations);
 
 %%%% Get images ready for SOC model
 % compute the population term in the divisive-normalization equation.
 % this term is simply the average across the complex-cell outputs
-% at each position (averaging across orientation).
-stimulusPOP = blob(stimulus,2,8)/8;
+% at each position (averaging across 8 orientations).
+natural.stimulusPOP = blob(natural.stimulus,2,8)/8;
 textures.stimulusPOP = blob(textures.stimulus,2,8)/8;
 
 % Repeat the population term for each of the orientations
-stimulusPOP = upsamplematrix(stimulusPOP,8,2,[],'nearest');
+natural.stimulusPOP = upsamplematrix(natural.stimulusPOP,8,2,[],'nearest');
 textures.stimulusPOP = upsamplematrix(textures.stimulusPOP,8,2,[],'nearest');
 
 % Apply divisive normalization to the complex-cell outputs.  there are two
@@ -135,18 +136,18 @@ textures.stimulusPOP = upsamplematrix(textures.stimulusPOP,8,2,[],'nearest');
 % values here and not worry about attempting to fit the parameters.
 r = 1;
 s = 0.5;
-stimulusSOC = stimulus.^r ./ (s.^r + stimulusPOP.^r);
+natural.stimulusSOC = natural.stimulus.^r ./ (s.^r + natural.stimulusPOP.^r);
 textures.stimulusSOC = textures.stimulus.^r ./ (s.^r + textures.stimulusPOP.^r);
 clear stimulusPOP;
 
 % Sum across orientation. After this step, stimulusSOC is images x positions.
-stimulusSOC = blob(stimulusSOC,2,8);
+natural.stimulusSOC = blob(natural.stimulusSOC,2,8);
 textures.stimulusSOC = blob(textures.stimulusSOC,2,8);
+clear r s
 
 %%
 %% Run images through SOC and OV models
 %%
-
 
 %% Get SOC & OV parameters all electrodes
 %%%%% Subjects/electrodes:
@@ -159,6 +160,7 @@ electrodes = [107 108 109 115 120 121 ... % S1
 % define parameters to collect looping through electrodes/subjects:
 socParams_all = zeros(length(electrodes),6);
 ovParams_all = zeros(length(electrodes),5);
+
 for ll = 1:length(electrodes)
 
     subj = subject_ind(ll);
@@ -187,20 +189,22 @@ for ll = 1:length(electrodes)
     % get median model parameters and plot prediction
     ovParams_all(ll,:) = median(cross_OVparams(:,:,ov_exponents==.5));
 end
+clear ll elec subj cross_SOCparams cross_OVparams% housekeeping
 
 %% Run all natural images through SOC and OV models
 % Loop through stimuli and electrodes
 % define output (stimuli X electrodes)
-SOC_estimates = zeros(size(stimulus,1),size(socParams_all,1));
-OV_estimates = zeros(size(stimulus,1),size(socParams_all,1));
-for ss = 1:size(stimulus,1) % stimuli
+natural.SOC_estimates = zeros(size(natural.stimulus,1),size(socParams_all,1));
+natural.OV_estimates = zeros(size(natural.stimulus,1),size(socParams_all,1));
+for ss = 1:size(natural.stimulus,1) % stimuli
     for ll = 1:size(socParams_all,1)
-        [~,socEstimate] = helpfit_SOC2(stimulusSOC(ss,:),socParams_all(ll,:),[],[]);
-        SOC_estimates(ss,ll) = socEstimate;
-        [~,ovEstimate] = helpfit_OVexp(stimulus(ss,:),ovParams_all(ll,:),[],[]);
-        OV_estimates(ss,ll) = ovEstimate;
+        [~,socEstimate] = helpfit_SOC2(natural.stimulusSOC(ss,:),socParams_all(ll,:),[],[]);
+        natural.SOC_estimates(ss,ll) = socEstimate;
+        [~,ovEstimate] = helpfit_OVexp(natural.stimulus(ss,:),ovParams_all(ll,:),[],[]);
+        natural.OV_estimates(ss,ll) = ovEstimate;
     end
 end
+clear ovEstimate socEstimate ll ss % housekeeping
 
 %% Run all textures images through SOC and OV models
 % Loop through stimuli and electrodes
@@ -215,12 +219,41 @@ for ss = 1:size(textures.stimulus,1) % stimuli
         textures.OV_estimates(ss,ll) = ovEstimate;
     end
 end
+clear ovEstimate socEstimate ll ss % housekeeping
 
-%%  Figure with output values directly from electrode estimates
+%%  Figure with SOC vs OV predictions for each electrode
+
+figure('Position',[0 0 1200 800])
+
+for example_elec1 = 1:15
+    subplot(3,5,example_elec1),hold on
+    h = scatter(natural.SOC_estimates(:,example_elec1),natural.OV_estimates(:,example_elec1),25,[.2 .2 .2],'filled','MarkerFaceAlpha',.2);
+    % add gratings:
+    scatter(textures.SOC_estimates(39:46,example_elec1),textures.OV_estimates(39:46,example_elec1),25,[.5 0 0],'filled')
+    scatter(textures.SOC_estimates(50,example_elec1),textures.OV_estimates(50,example_elec1),25,[.8 0 0],'filled')
+    scatter(textures.SOC_estimates(49,example_elec1),textures.OV_estimates(49,example_elec1),25,[1 0 0],'filled')
+    scatter(textures.SOC_estimates(48,example_elec1),textures.OV_estimates(48,example_elec1),25,[1 .2 .2],'filled')
+    scatter(textures.SOC_estimates(47,example_elec1),textures.OV_estimates(47,example_elec1),25,[1 .4 .4],'filled')
+    axis square 
+    axis tight
+
+    xlabel('SOC prediction')
+    ylabel('OV prediction')
+    title(['El' int2str(example_elec1) ' Natural (gray) Gratings (red)'])
+end
+ 
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+        ['NaturalImages_AllElectrodes']))
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+        ['NaturalImages_AllElectrodes']))
+
+
+%%  Figure with output values directly from all electrodes together
 
 figure('Position',[0 0 600 300])
 subplot(1,2,1),hold on
-plot(SOC_estimates,OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
+plot(natural.SOC_estimates,natural.OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
 
 % add gratings:
 plot(textures.SOC_estimates(39:46,:),textures.OV_estimates(39:46,:),'.','Color',[1 0 0])
@@ -235,10 +268,10 @@ title('Natural Images(black) and Gratings(red)')
 
 % set axis on limits from natural images:
 subplot(1,2,2),hold on
-plot(SOC_estimates,OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
+plot(natural.SOC_estimates,natural.OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
 
-xlim([min([SOC_estimates(:);OV_estimates(:)])-10 max([SOC_estimates(:);OV_estimates(:)])+10])
-ylim([min([SOC_estimates(:);OV_estimates(:)])-10 max([SOC_estimates(:);OV_estimates(:)])+10])
+xlim([min([natural.SOC_estimates(:);natural.OV_estimates(:)])-10 max([natural.SOC_estimates(:);natural.OV_estimates(:)])+10])
+ylim([min([natural.SOC_estimates(:);natural.OV_estimates(:)])-10 max([natural.SOC_estimates(:);natural.OV_estimates(:)])+10])
 axis square 
 
 xlabel('bb prediction (SOC model)')
@@ -251,216 +284,81 @@ title('Natural Images')
 % print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
 %         ['NaturalImages_Test01']))
 
-%% Figure normalized to grating response:
+%%  Figure with SOC vs OV predictions for example electrodes (Figure 8)
 
-SOC_estimates_norm = zeros(size(SOC_estimates));
-OV_estimates_norm = zeros(size(OV_estimates));
-textures.SOC_estimates_norm = zeros(size(textures.SOC_estimates));
-textures.OV_estimates_norm = zeros(size(textures.OV_estimates));
 
-for kk = 1:size(SOC_estimates,2) % electrodes
-    grat_SOC = textures.SOC_estimates(39,kk);
-    SOC_estimates_norm(:,kk) = SOC_estimates(:,kk)./grat_SOC;
-    textures.SOC_estimates_norm(:,kk) = textures.SOC_estimates(:,kk)./grat_SOC;
-    
-    grat_OV = textures.OV_estimates(39,kk);
-    OV_estimates_norm(:,kk) = OV_estimates(:,kk)./grat_OV;
-    textures.OV_estimates_norm(:,kk) = textures.OV_estimates(:,kk)./grat_OV;
+% example_elec1 = 3; 
+% example_images = [68 689];
+example_elec1 = 8; 
+example_images = [231 143];
+example_imcolors = {[0 0 1],[0 .8 .1]};
+figure('Position',[0 0 300 300]),hold on
+
+h = scatter(natural.SOC_estimates(:,example_elec1),natural.OV_estimates(:,example_elec1),25,[.2 .2 .2],'filled','MarkerFaceAlpha',.2);
+% add gratings:
+scatter(textures.SOC_estimates([39:46 47:50],example_elec1),textures.OV_estimates([39:46 47:50],example_elec1),35,[0 0 0],'filled')
+scatter(textures.SOC_estimates(39:46,example_elec1),textures.OV_estimates(39:46,example_elec1),25,[.5 0 0],'filled')
+scatter(textures.SOC_estimates(50,example_elec1),textures.OV_estimates(50,example_elec1),25,[.8 0 0],'filled')
+scatter(textures.SOC_estimates(49,example_elec1),textures.OV_estimates(49,example_elec1),25,[1 0 0],'filled')
+scatter(textures.SOC_estimates(48,example_elec1),textures.OV_estimates(48,example_elec1),25,[1 .2 .2],'filled')
+scatter(textures.SOC_estimates(47,example_elec1),textures.OV_estimates(47,example_elec1),25,[1 .4 .4],'filled')
+% add example images in a different color:
+for kk = 1:length(example_images)
+    h = scatter(natural.SOC_estimates(example_images(kk),example_elec1),...
+        natural.OV_estimates(example_images(kk),example_elec1),35,'k','filled');
+    h = scatter(natural.SOC_estimates(example_images(kk),example_elec1),...
+        natural.OV_estimates(example_images(kk),example_elec1),25,example_imcolors{kk},'filled');
 end
+axis square 
+axis tight
 
-figure('Position',[0 0 800 350])
-subplot(4,4,[1:3 5:7 9:11])
-hold on
-plot(SOC_estimates_norm,OV_estimates_norm,'o','Color',[.5 .5 .5],'MarkerSize',2)
-plot(textures.SOC_estimates_norm(39:46,:),textures.OV_estimates_norm(39:46,:),'o','Color',[1 .5 .5],'MarkerSize',2)
-% [298,10] image/electrode example high OV
-plot(SOC_estimates_norm(298,10),OV_estimates_norm(298,10),'o','Color',[.2 .2 1],'MarkerSize',2)
-% [655,1] image/electrode example high SOC
-plot(SOC_estimates_norm(655,1),OV_estimates_norm(655,1),'o','Color',[.2 1 .2],'MarkerSize',2)
-
-xlim([min([SOC_estimates_norm(:);OV_estimates_norm(:)]) max([SOC_estimates_norm(:);OV_estimates_norm(:)])])
-ylim([min([SOC_estimates_norm(:);OV_estimates_norm(:)]) max([OV_estimates_norm(:)]+1)])
-% ylim([min([SOC_estimates_norm(:);OV_estimates_norm(:)]) 8])
-plot([0 1],[1 1],'k','LineWidth',1)
-plot([1 1],[0 1],'k','LineWidth',1)
-
-ylabel('gamma prediction (OV model)')
-title('Natural images normalized to grating(red)')
-set(gca,'XTick',[1 10 20],'YTick',[1])
-
-subplot(4,4,[4 8 12])
-[nn,xx] = hist(OV_estimates_norm(:),[0:.05:1.1]);
-% barh(xx,nn,'FaceColor',[.5 .5 .5]);
-plot(nn,xx,'Color',[.5 .5 .5]);
-ylim([min([SOC_estimates_norm(:);OV_estimates_norm(:)]) max([OV_estimates_norm(:)]+1)])
-xlim([0 max(nn)+10])
-hold on
-% all_grating_OV = textures.OV_estimates_norm(39:46,:);
-% [nn,xx] = hist(all_grating_OV(:),[0:.05:1.1]);
-% % barh(xx,nn,'FaceColor',[1 .5 .5]);
-% plot(nn,xx,'Color',[1 .5 .5]);
-set(gca,'YTick',[1])
-box off
-
-subplot(4,4,13:15)
-[nn,xx] = hist(SOC_estimates_norm(:),[0:.05:20]);
-% bar(xx,nn,'FaceColor',[.5 .5 .5]);
-plot(xx,nn,'Color',[.5 .5 .5],'LineWidth',1);
-xlim([min([SOC_estimates_norm(:);OV_estimates_norm(:)]) max([SOC_estimates_norm(:);OV_estimates_norm(:)])])
-ylim([0 max(nn)+10])
-hold on
-% all_grating_SOC = textures.SOC_estimates_norm(39:46,:);
-% [nn,xx] = hist(all_grating_SOC(:),[0:.05:20]);
-% bar(xx,nn,'FaceColor',[1 .5 .5]);
-% plot(xx,nn,'Color',[1 .5 .5],'LineWidth',1);
-box off
-set(gca,'XTick',[1 10 20])
-xlabel('bb prediction (SOC model)')
-
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-%         ['NaturalImages_Test03_norm']))
-% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-%         ['NaturalImages_Test03_norm']))
-
-%% Display some images with large normalized values:
-%%
-[ii,jj] = find(OV_estimates_norm>.200);
-ii = ii(24);
-jj= jj(24);
-% [298,10] image/electrode
-
-% plot one image:
-im0 = (double(a1.ims(:,:,ii))/255).^2;  % now in luminance values between 0-1 
-% only do sqrt for viewing on your monitor (since your monitor performs a gamma squaring)
-figure; imagesc(sqrt(im0));
-colormap gray
-
-seed_params = ovParams_all(jj,:);
-figure('Position',[0 0 500 500])
-imagesc(sqrt(im0)),hold on
-% Move pRF in 135x135 to original size of 960x960 
-%   half of the screen is 60 in filtered and 960 in original
-orig_x = 480 + (seed_params(1)-res/2) * 480./60;
-orig_y = 480 + (seed_params(2)-res/2) * 480./60;
-orig_sigma = seed_params(3) * 480./60;
-axis image
-colormap gray
-
-numPoints = 50;
-c.th = linspace(0,2*pi, numPoints);
-[c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
-plot(c.x + orig_y, c.y + orig_x, 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-[c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
-plot(c.x + orig_y, c.y + orig_x, 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
-
+xlabel('SOC prediction')
+ylabel('OV prediction')
+title(['El' int2str(example_elec1) ' Natural (gray) Gratings (red)'])
+ 
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test02_example']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test02_example']))
+print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
+        ['NaturalImages_ExampleEl' int2str(example_elec1)]))
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
+        ['NaturalImages_ExampleEl' int2str(example_elec1)]))
 
-%% Display some images with large normalized SOC values:
-%%    
-[ii,jj] = find(SOC_estimates_norm>20);
-ii = ii(3);
-jj= jj(3);
-% [655,1] image/electrode
+% Find some images with certain OV/SOC values:
+% [ii] = find(natural.SOC_estimates(:,example_elec1)>200);
+% ii = ii(1);
+% [ii] = find(natural.OV_estimates(:,example_elec1)>200);
+% ii = ii(1);
 
-% plot one image:
-im0 = (double(a1.ims(:,:,ii))/255).^2;  % now in luminance values between 0-1 
-% only do sqrt for viewing on your monitor (since your monitor performs a gamma squaring)
-figure; imagesc(sqrt(im0));
-colormap gray
+for kk = 1:length(example_images)
 
-seed_params = ovParams_all(jj,:);
-figure('Position',[0 0 500 500])
-imagesc(sqrt(im0)),hold on
-% Move pRF in 135x135 to original size of 960x960 
-%   half of the screen is 60 in filtered and 960 in original
-orig_x = 480 + (seed_params(1)-res/2) * 480./60;
-orig_y = 480 + (seed_params(2)-res/2) * 480./60;
-orig_sigma = seed_params(3) * 480./60;
-axis image
-colormap gray
-
-numPoints = 50;
-c.th = linspace(0,2*pi, numPoints);
-[c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
-plot(c.x + orig_y, c.y + orig_x, 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-[c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
-plot(c.x + orig_y, c.y + orig_x, 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
-
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test02_example2']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test02_example2']))
-
-%% Display some images with large values:
-%%
-[ii,jj] = find(OV_estimates>600);
-
-figure
-imagesc(reshape(stimulusSOC(ii,:),res,res))
-
-% plot one image:
-im0 = (double(a1.ims(:,:,ii))/255).^2;  % now in luminance values between 0-1 
-% only do sqrt for viewing on your monitor (since your monitor performs a gamma squaring)
-figure; imagesc(sqrt(im0));
-colormap gray
-
-
-
-
-
-%%
-
-ims_plot = [689];%[145 146 342 493 689];
-
-figure
-for kk = 1:length(ims_plot)
     % plot one image:
-    im0 = (double(a1.ims(:,:,ims_plot(kk)))/255).^2;  % now in luminance values between 0-1 
+    im0 = (double(a1.ims(:,:,example_images(kk)))/255).^2;  % now in luminance values between 0-1 
+
+    % get the OV model parameters for this electrode
+    seed_params = ovParams_all(example_elec1,:);
+
+    figure('Position',[0 0 500 500])
     % only do sqrt for viewing on your monitor (since your monitor performs a gamma squaring)
-    subplot(1,length(ims_plot),kk)
-    imagesc(sqrt(im0));
-    colormap gray
+    imagesc(sqrt(im0)),hold on
+    % Move pRF in 135x135 to original size of 960x960 
+    %   half of the screen is 60 in filtered and 960 in original
+    orig_x = 480 + (seed_params(1)-res/2) * 480./60;
+    orig_y = 480 + (seed_params(2)-res/2) * 480./60;
+    orig_sigma = seed_params(3) * 480./60;
     axis image
-    axis off
+    colormap gray
+
+    numPoints = 50;
+    c.th = linspace(0,2*pi, numPoints);
+    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
+    plot(c.x + orig_y, c.y + orig_x, 'Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
+    [c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
+    plot(c.x + orig_y, c.y + orig_x,'--','Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
+
+
+    set(gcf,'PaperPositionMode','auto')
+    print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
+            ['NaturalImages_ExampleEl' int2str(example_elec1) '_image' int2str(example_images(kk))])) 
+    print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
+            ['NaturalImages_ExampleEl' int2str(example_elec1) '_image' int2str(example_images(kk))])) 
 end
-
-%%
-%% Figure with output from 1 electrode
-%%
-
-%%  Figure with output values directly from electrode estimates
-
-example_elec1 = 15;
-% example_elec2 = 10;
-
-figure('Position',[0 0 1200 800])
-
-for example_elec1 = 1:15
-    subplot(3,5,example_elec1),hold on
-    h = scatter(SOC_estimates(:,example_elec1),OV_estimates(:,example_elec1),15,[.2 .2 .2],'filled','MarkerFaceAlpha',.3);
-    % add gratings:
-    scatter(textures.SOC_estimates(39:46,example_elec1),textures.OV_estimates(39:46,example_elec1),15,[.5 0 0],'filled')
-    scatter(textures.SOC_estimates(50,example_elec1),textures.OV_estimates(50,example_elec1),15,[.8 0 0],'filled')
-    scatter(textures.SOC_estimates(49,example_elec1),textures.OV_estimates(49,example_elec1),15,[1 0 0],'filled')
-    scatter(textures.SOC_estimates(48,example_elec1),textures.OV_estimates(48,example_elec1),15,[1 .2 .2],'filled')
-    scatter(textures.SOC_estimates(47,example_elec1),textures.OV_estimates(47,example_elec1),15,[1 .4 .4],'filled')
-    axis square 
-    axis tight
-
-    xlabel('SOC prediction')
-    ylabel('OV prediction')
-    title(['El' int2str(example_elec1) ' Natural (gray) Gratings (red)'])
-end
-
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test03']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test03']))
 
