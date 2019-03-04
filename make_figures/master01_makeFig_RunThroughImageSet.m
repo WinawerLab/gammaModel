@@ -97,22 +97,23 @@ stimulus = applymultiscalegaborfilters(reshape(stimulus,270*270,[])', ...
 save(fullfile(dataDir,'derivatives','gaborFilt','McGill_imageset_gaborFilt01.mat'),'stimulus','filt_prop')
 
 %%
-%% LEFT OFF HERE
-%%
 %% figure of images with different orientations
 
+% load filtered textures used in paper
 textures = load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus');
 
+% load natural images McGill set
 load(fullfile(dataDir,'derivatives','gaborFilt','McGill_imageset_gaborFilt01.mat'),'stimulus','filt_prop')
 
-% quadrature pairs: compute the square root of the sum of the squares of
-% the outputs of quadrature-phase filter pairs (this is the standard
-% complex-cell energy model). after this step, stimulus is images x
-% orientations*positions.
+% Calculate quadrature pairs: compute the square root of the sum of the
+% squares of the outputs of quadrature-phase filter pairs (this is the
+% standard complex-cell energy model). After this step, stimulus is images
+% x orientations*positions.
 stimulus = sqrt(blob(stimulus.^2,2,2)); % 
-textures.stimulus = sqrt(blob(textures.stimulus.^2,2,2)); % 
+textures.stimulus = sqrt(blob(textures.stimulus.^2,2,2)); 
+% --> stimulus is the input to the OV model
 
-% resolution:
+% Resolution of natural image and textures is the same:
 res = sqrt(size(stimulus,2)/filt_prop.orientations);
 
 %%%% Get images ready for SOC model
@@ -122,28 +123,32 @@ res = sqrt(size(stimulus,2)/filt_prop.orientations);
 stimulusPOP = blob(stimulus,2,8)/8;
 textures.stimulusPOP = blob(textures.stimulus,2,8)/8;
 
-% repeat the population term for each of the orientations
+% Repeat the population term for each of the orientations
 stimulusPOP = upsamplematrix(stimulusPOP,8,2,[],'nearest');
 textures.stimulusPOP = upsamplematrix(textures.stimulusPOP,8,2,[],'nearest');
 
-% apply divisive normalization to the complex-cell outputs.  there are two parameters
-% that influence this operation: an exponent term (r) and a semi-saturation term (s).
-% the parameter values specified here were determined through a separate fitting
-% procedure (see paper for details).  for the purposes of this script, we will
-% simply hard-code the parameter values here and not worry about attempting to fit
-% the parameters.
+% Apply divisive normalization to the complex-cell outputs.  there are two
+% parameters that influence this operation: an exponent term (r) and a
+% semi-saturation term (s). the parameter values specified here were
+% determined through a separate fitting procedure (see paper for details).
+% for the purposes of this script, we will simply hard-code the parameter
+% values here and not worry about attempting to fit the parameters.
 r = 1;
 s = 0.5;
 stimulusSOC = stimulus.^r ./ (s.^r + stimulusPOP.^r);
 textures.stimulusSOC = textures.stimulus.^r ./ (s.^r + textures.stimulusPOP.^r);
 clear stimulusPOP;
 
-% sum across orientation.  after this step, stimulus is images x positions.
+% Sum across orientation. After this step, stimulusSOC is images x positions.
 stimulusSOC = blob(stimulusSOC,2,8);
 textures.stimulusSOC = blob(textures.stimulusSOC,2,8);
 
-%% Run images through SOC model
+%%
+%% Run images through SOC and OV models
+%%
 
+
+%% Get SOC & OV parameters all electrodes
 %%%%% Subjects/electrodes:
 subject_ind = [19 19 19 19 19 19  ... % S1
     24 24 ... % S2
@@ -151,8 +156,7 @@ subject_ind = [19 19 19 19 19 19  ... % S1
 electrodes = [107 108 109 115 120 121 ... % S1
     45 46 ... % S2
     49 50 52 57 58 59 60]; % S3
-
-% get SOC & OV parameters all electrodes
+% define parameters to collect looping through electrodes/subjects:
 socParams_all = zeros(length(electrodes),6);
 ovParams_all = zeros(length(electrodes),5);
 for ll = 1:length(electrodes)
@@ -182,7 +186,6 @@ for ll = 1:length(electrodes)
         'cross_OVparams')   
     % get median model parameters and plot prediction
     ovParams_all(ll,:) = median(cross_OVparams(:,:,ov_exponents==.5));
-
 end
 
 %% Run all natural images through SOC and OV models
@@ -220,7 +223,8 @@ subplot(1,2,1),hold on
 plot(SOC_estimates,OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
 
 % add gratings:
-plot(textures.SOC_estimates(39:46,:),textures.OV_estimates(39:46,:),'r.')
+plot(textures.SOC_estimates(39:46,:),textures.OV_estimates(39:46,:),'.','Color',[1 0 0])
+plot(textures.SOC_estimates(50,:),textures.OV_estimates(50,:),'.','Color',[1 .5 .5])
 xlim([min([textures.SOC_estimates(:);textures.OV_estimates(:)])-30 max([textures.SOC_estimates(:);textures.OV_estimates(:)])+30])
 ylim([min([textures.SOC_estimates(:);textures.OV_estimates(:)])-30 max([textures.SOC_estimates(:);textures.OV_estimates(:)])+30])
 axis square 
@@ -241,11 +245,11 @@ xlabel('bb prediction (SOC model)')
 ylabel('gamma prediction (OV model)')
 title('Natural Images')
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test01']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test01']))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+%         ['NaturalImages_Test01']))
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+%         ['NaturalImages_Test01']))
 
 %% Figure normalized to grating response:
 
@@ -313,11 +317,11 @@ box off
 set(gca,'XTick',[1 10 20])
 xlabel('bb prediction (SOC model)')
 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test03_norm']))
-print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-        ['NaturalImages_Test03_norm']))
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+%         ['NaturalImages_Test03_norm']))
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+%         ['NaturalImages_Test03_norm']))
 
 %% Display some images with large normalized values:
 %%
@@ -435,35 +439,28 @@ end
 example_elec1 = 15;
 % example_elec2 = 10;
 
-figure('Position',[0 0 600 300])
-subplot(1,2,1),hold on
-plot(SOC_estimates(:,example_elec1),OV_estimates(:,example_elec1),'o','Color',[.5 .5 .5],'MarkerSize',2)
+figure('Position',[0 0 1200 800])
 
-% add gratings:
-plot(textures.SOC_estimates(39:46,example_elec1),textures.OV_estimates(39:46,example_elec1),'r.')
-% xlim([min([textures.SOC_estimates(:);textures.OV_estimates(:)])-30 max([textures.SOC_estimates(:);textures.OV_estimates(:)])+30])
-% ylim([min([textures.SOC_estimates(:);textures.OV_estimates(:)])-30 max([textures.SOC_estimates(:);textures.OV_estimates(:)])+30])
-axis square 
+for example_elec1 = 1:15
+    subplot(3,5,example_elec1),hold on
+    h = scatter(SOC_estimates(:,example_elec1),OV_estimates(:,example_elec1),15,[.2 .2 .2],'filled','MarkerFaceAlpha',.3);
+    % add gratings:
+    scatter(textures.SOC_estimates(39:46,example_elec1),textures.OV_estimates(39:46,example_elec1),15,[.5 0 0],'filled')
+    scatter(textures.SOC_estimates(50,example_elec1),textures.OV_estimates(50,example_elec1),15,[.8 0 0],'filled')
+    scatter(textures.SOC_estimates(49,example_elec1),textures.OV_estimates(49,example_elec1),15,[1 0 0],'filled')
+    scatter(textures.SOC_estimates(48,example_elec1),textures.OV_estimates(48,example_elec1),15,[1 .2 .2],'filled')
+    scatter(textures.SOC_estimates(47,example_elec1),textures.OV_estimates(47,example_elec1),15,[1 .4 .4],'filled')
+    axis square 
+    axis tight
 
-xlabel('bb prediction (SOC model)')
-ylabel('gamma prediction (OV model)')
-title('Natural Images(black) and Gratings(red)')
-%%
-% set axis on limits from natural images:
-subplot(1,2,2),hold on
-plot(SOC_estimates,OV_estimates,'o','Color',[.5 .5 .5],'MarkerSize',2)
+    xlabel('SOC prediction')
+    ylabel('OV prediction')
+    title(['El' int2str(example_elec1) ' Natural (gray) Gratings (red)'])
+end
 
-xlim([min([SOC_estimates(:);OV_estimates(:)])-10 max([SOC_estimates(:);OV_estimates(:)])+10])
-ylim([min([SOC_estimates(:);OV_estimates(:)])-10 max([SOC_estimates(:);OV_estimates(:)])+10])
-axis square 
-
-xlabel('bb prediction (SOC model)')
-ylabel('gamma prediction (OV model)')
-title('Natural Images')
-
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-%         ['NaturalImages_Test03']))
-% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
-%         ['NaturalImages_Test03']))
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+        ['NaturalImages_Test03']))
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
+        ['NaturalImages_Test03']))
 

@@ -366,7 +366,6 @@ ecog_bb_err_all = zeros(length(electrodes),2,86);
 
 % Get average broadband across all electrodes/subjects:
 for ll = 1:length(electrodes)
-    plot_nr = plot_nr + 1;
 
     subj = subject_ind(ll);
     elec = electrodes(ll);
@@ -443,8 +442,8 @@ end
 subplot(8,1,7),hold on  
 bar(mean(ecog_bb_all,1),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0],'LineWidth',1);
 bb_group_err = std(ecog_bb_all,1)./sqrt(size(ecog_bb_all,1));
-bb_group_up = mean(ecog_bb_all,1)+1.96*bb_group_err;
-bb_group_low = mean(ecog_bb_all,1)-1.96*bb_group_err;
+bb_group_up = mean(ecog_bb_all,1)+bb_group_err;
+bb_group_low = mean(ecog_bb_all,1)-bb_group_err;
 plot([1:86; 1:86],[bb_group_up; bb_group_low],'k');
 % plot(mean(SOCestimate_all,1)','r','LineWidth',2)
 % plot stimulus cutoffs

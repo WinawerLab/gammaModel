@@ -14,7 +14,6 @@ addpath(rootPath);
 % Generates a list of the directories below the Gamma Model tree.
 addpath(fullfile(rootPath, 'compute'))
 addpath(fullfile(rootPath, 'models'))
-addpath(fullfile(rootPath, 'scripts'))
 addpath(fullfile(rootPath, 'data_info'))
 addpath(genpath(fullfile(rootPath, 'external')))
 
