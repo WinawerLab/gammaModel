@@ -293,13 +293,12 @@ title('Natural Images')
 % print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt',...
 %         ['NaturalImages_Test01']))
 
-%%  Figure with SOC vs OV predictions for example electrodes (Figure 8)
-
+%% Figure with SOC vs OV predictions for example electrodes (Figure 8)
 
 example_elec1 = 3; 
-example_images = [68 689];
-example_elec1 = 8; 
-example_images = [231 143];
+example_images = [68 493]; % previous: [689 is more plaid-like];%
+% example_elec1 = 8; 
+% example_images = [231 143];
 example_imcolors = {[.2 .2 1],[0 .8 .1]};
 figure('Position',[0 0 250 250]),hold on
 
