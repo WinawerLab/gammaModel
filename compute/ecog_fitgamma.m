@@ -7,7 +7,7 @@ function [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
 %
 % input:
 % f: frequencies
-% f_use4fit=[35:57 65:115 126:175 186:200];
+% f_use4fitb= [35:57 65:115 126:175 186:200];
 % data_base: used to fit exp: (1/f^exp) - enter power (not log)
 % data_fit: used to fit weights and gaussian - enter power (not log)
 %

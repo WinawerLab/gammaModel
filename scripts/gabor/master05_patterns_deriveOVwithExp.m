@@ -23,28 +23,6 @@ load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.ma
 stimulus = sqrt(blob(stimulus.^2,2,2));
 % the square root may not be typical for complex cell energy model
 
-% % compute the population term in the divisive-normalization equation.
-% % this term is simply the average across the complex-cell outputs
-% % at each position (averaging across orientation).
-% stimulusPOP = blob(stimulus,2,8)/8;
-% 
-% % repeat the population term for each of the orientations
-% stimulusPOP = upsamplematrix(stimulusPOP,8,2,[],'nearest');
-% 
-% % apply divisive normalization to the complex-cell outputs.  there are two parameters
-% % that influence this operation: an exponent term (r) and a semi-saturation term (s).
-% % the parameter values specified here were determined through a separate fitting
-% % procedure (see paper for details).  for the purposes of this script, we will
-% % simply hard-code the parameter values here and not worry about attempting to fit
-% % the parameters.
-% r = 1;
-% s = 0.5;
-% stimulus = stimulus.^r ./ (s.^r + stimulusPOP.^r);
-% clear stimulusPOP;
-% 
-% % sum across orientation.  after this step, stimulus is images x positions.
-% imEnergyMean = blob(stimulus,2,8);
-
 
 %% Load ECoG data and fit
 
@@ -91,7 +69,7 @@ for el = 1:length(electrodes)
     analysisType = 'spectra200';
     
     % Load ECoG data:
-    dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
@@ -104,7 +82,7 @@ for el = 1:length(electrodes)
     %% Load SOC model results to get x and y (and sigma/sqrt(n))
     
     modelType = 'fitSOCbbpower2';
-    load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','fitSOCbb',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'seeds',...
         'cross_SOCparams','cross_SOCestimate')
@@ -159,7 +137,7 @@ for el = 1:length(electrodes)
         end
     end
 
-    save(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+    save(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_OVsimple']),...
         'seed_params',...
         'cross_OVparams','cross_OVestimate')
@@ -189,13 +167,13 @@ elec = 60;
 res = sqrt(size(stimulus,2)/8);
 
 % load model fit
-load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'seed_params',...
         'cross_OVparams','cross_OVestimate')
 
 % load ecog data:
-dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
     'ses-01','derivatives','ieeg',...
     ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
 load(dataFitName)
@@ -226,9 +204,9 @@ set(gca,'XTick',[1:86],'XTickLabel',[],'YTick',[0:ceil(max(ecog_g(:))/4):max(eco
 ylabel('gamma')
 
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveOV',...
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
 %% Display model results for all electrodes, all subjects

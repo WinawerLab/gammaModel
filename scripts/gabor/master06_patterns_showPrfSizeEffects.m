@@ -14,64 +14,69 @@ addpath('/Users/dora/Documents/git/ecogBasicCode/')
 addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 %% Load original images
-origIm = load(fullfile(dataDir,'soc_bids','stimuli','task-soc_stimuli.mat'),'stimuli');
+origIm = load(fullfile(dataDir,'stimuli','task-soc_stimuli.mat'),'stimuli');
 
-%% Load preprocessed images and divisive normalization:
+%% Load preprocessed images
 
-load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
+load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
 
 % compute the square root of the sum of the squares of the outputs of
 % quadrature-phase filter pairs (this is the standard complex-cell energy model).
 % after this step, stimulus is images x orientations*positions.
 stimulus = sqrt(blob(stimulus.^2,2,2));
+%%%-----> this is this input to the OV model
 
-% % compute the population term in the divisive-normalization equation.
-% % this term is simply the average across the complex-cell outputs
-% % at each position (averaging across orientation).
-% stimulusPOP = blob(stimulus,2,8)/8;
-% 
-% % repeat the population term for each of the orientations
-% stimulusPOP = upsamplematrix(stimulusPOP,8,2,[],'nearest');
-% 
-% % apply divisive normalization to the complex-cell outputs.  there are two parameters
-% % that influence this operation: an exponent term (r) and a semi-saturation term (s).
-% % the parameter values specified here were determined through a separate fitting
-% % procedure (see paper for details).  for the purposes of this script, we will
-% % simply hard-code the parameter values here and not worry about attempting to fit
-% % the parameters.
-% r = 1;
-% s = 0.5;
-% stimulus = stimulus.^r ./ (s.^r + stimulusPOP.^r);
-% clear stimulusPOP;
+% compute the population term in the divisive-normalization equation.
+% this term is simply the average across the complex-cell outputs
+% at each position (averaging across orientation).
+stimulusPOP = blob(stimulus,2,8)/8;
+
+% repeat the population term for each of the orientations
+stimulusPOP = upsamplematrix(stimulusPOP,8,2,[],'nearest');
+
+% apply divisive normalization to the complex-cell outputs.  there are two parameters
+% that influence this operation: an exponent term (r) and a semi-saturation term (s).
+% the parameter values specified here were determined through a separate fitting
+% procedure (see paper for details).  for the purposes of this script, we will
+% simply hard-code the parameter values here and not worry about attempting to fit
+% the parameters.
+r = 1;
+s = 0.5;
+stimulusSOC = stimulus.^r ./ (s.^r + stimulusPOP.^r);
+clear stimulusPOP;
 
 % sum across orientation.  after this step, stimulus is images x positions.
-imEnergyMean = blob(stimulus,2,8);
+imEnergyMean = blob(stimulusSOC,2,8);
+%%%-----> this is this input to the SOC model
 
 %% Display NBF model results for one electrode
+% Figure 8C-D
 
 %%%%% Pick a subject:
-subjects = [19,23,24];
+subjects = [19,23,24,1001];
 s = 3; subj = subjects(s);
 
 % %%%% Pick an electrode:
 % electrodes = [107 108 109 115 120 121]; % S1
 % electrodes = [53 54]; % S2
 % electrodes = [45 46]; % S3
+% electrodes = [49 50 52 57 58 59 60];% S4
 
 analysisType = 'spectra200';
-modelType = 'NBFsimple2';
+modelType = 'OVsimple';
+ov_exponents = [.1:.1:1];
+ov_exp_used = find(ov_exponents==.5);
 
-elec = 46;
+elec = 45;% used subject 3 electrode 46
 res = sqrt(size(stimulus,2)/8);
 
 % Load NBF model fit:
-load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-        'xys_pix','seed_params','prf_sizes',...
-        'cross_NBFparams','cross_NBFestimate')
+        'seed_params','cross_OVparams','cross_OVestimate')
 
 % Load ECoG data:
-dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
     'ses-01','derivatives','ieeg',...
     ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
 load(dataFitName)
@@ -85,7 +90,6 @@ ecog_g = mean(100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1),2);
 ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
     squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
 ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
-
 
 res = sqrt(size(imEnergyMean,2));  % resolution of the pre-processed stimuli
 [~,xx,yy] = makegaussian2d(res,2,2,2,2);
@@ -121,11 +125,9 @@ for kk = 1:length(im_nrs)
     [c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
     plot(c.x + orig_y, c.y + orig_x, 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
     
-
     xlim([orig_y-3*orig_sigma orig_y+3*orig_sigma])
     ylim([orig_x-3*orig_sigma orig_x+3*orig_sigma])
     title(['im ' int2str(im_nrs(kk))])
-    
     
     % contrast images + prf
     subplot(3,length(im_nrs),length(im_nrs)+kk)
@@ -161,15 +163,15 @@ end
 subplot(3,length(im_nrs),length(im_nrs)*2+[1 2]),hold on
 bar([1:length(im_nrs)],ecog_g(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
 plot([1:length(im_nrs); 1:length(im_nrs)],ecog_g_err(:,im_nrs),'k');
-plot([1:length(im_nrs)],cross_NBFestimate(im_nrs),'r','LineWidth',1)
-plot([1:length(im_nrs)],cross_NBFestimate(im_nrs),'r.','MarkerSize',20)
-ylim([0 max(max(ecog_g_err(:,im_nrs)))])
+plot([1:length(im_nrs)],cross_OVestimate(im_nrs,ov_exp_used),'r','LineWidth',1)
+plot([1:length(im_nrs)],cross_OVestimate(im_nrs,ov_exp_used),'r.','MarkerSize',20)
+% ylim([0 max(max(ecog_g_err(:,im_nrs)))])
 xlim([0 length(im_nrs)+1])
 set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
 
 %%% Bar plot model prediction
 subplot(3,length(im_nrs),length(im_nrs)*2+[3 4]),hold on
-bar(1:length(im_nrs),cross_NBFestimate(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+bar(1:length(im_nrs),cross_OVestimate(im_nrs,ov_exp_used),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
 ylim([0 max(max(ecog_g_err(:,im_nrs)))])
 xlim([0 length(im_nrs)+1])
 set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
@@ -180,21 +182,15 @@ set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
 % [~,modelfit1] = helpfit_NBFsimple(stimulus,test_params,[],[]);
 % plot(1:length(im_nrs),modelfit1(im_nrs)' ,'b','LineWidth',2)
 
-
-set(gcf,'PaperPositionMode','auto')
-% print('-depsc2','-r300','-painters','-tiff',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
 %         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-% print('-dpsc','-r300','-painters',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
 %         ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
-        ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
-        ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_' modelType]))
 
-    
-    
-%% zoom into some images because the eps in the overview file misaligns the prf and image..
+%% zoom into some images because the eps in the overview file may misalign the prf and image..
 max_prf_images = 0.05;
+im_nrs = [10 74:78 50];
 
 for kk = 1:length(im_nrs)
     % images + prf
@@ -211,26 +207,29 @@ for kk = 1:length(im_nrs)
     numPoints = 50;
     c.th = linspace(0,2*pi, numPoints);
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
-    plot(c.x + orig_y, c.y + orig_x, 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    plot(c.x + orig_y, c.y + orig_x, 'y','LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
     [c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
-    plot(c.x + orig_y, c.y + orig_x, 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    plot(c.x + orig_y, c.y + orig_x, 'y:','LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
     
     axis off
     
     set(gcf,'PaperPositionMode','auto')
-    print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+    print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
             ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_im' int2str(im_nrs(kk))]))
-    print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+    print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
             ['PrfSizeEffects_sub-' int2str(subj) '_' analysisType '_el' int2str(elec) '_im' int2str(im_nrs(kk))]))
 end
 
 %% Display NBF model results in 2 stimuli for several electrodes/subjects
+% Figure 8A-B
 
 %%%%% Pick a subject:
 subject_ind = [19 19  19  19  19  19  24 24];
 electrodes = [107 108 109 115 120 121 45 46];
+% subject_ind = [1001 1001 1001 1001 1001 1001 1001];
+% electrodes = [49 50 52 57 58 59 60];
 
-figure('Position',[0 0 600 800])
+figure('Position',[0 0 600 1000])
     
 for ll = 1:length(electrodes)
     
@@ -238,18 +237,17 @@ for ll = 1:length(electrodes)
     elec = electrodes(ll);
     
     analysisType = 'spectra200';
-    modelType = 'NBFsimple2';
+    modelType = 'OVsimple';
 
     res = sqrt(size(stimulus,2)/8);
 
     % Load NBF model fit:
-    load(fullfile(dataDir,'soc_bids','derivatives','gaborFilt','deriveNBF',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-            'xys_pix','seed_params','prf_sizes',...
-            'cross_NBFparams','cross_NBFestimate')
+            'seed_params','cross_OVparams','cross_OVestimate')
 
     % Load ECoG data:
-    dataFitName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],...
+    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
@@ -263,7 +261,6 @@ for ll = 1:length(electrodes)
     ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
         squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
     ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
-
 
     res = sqrt(size(imEnergyMean,2));  % resolution of the pre-processed stimuli
     [~,xx,yy] = makegaussian2d(res,2,2,2,2);
@@ -286,14 +283,14 @@ for ll = 1:length(electrodes)
     subplot(length(electrodes),6,6*ll-5),hold on
     bar([1:length(im_nrs)],ecog_g(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:length(im_nrs); 1:length(im_nrs)],ecog_g_err(:,im_nrs),'k');
-    plot(1:length(im_nrs),cross_NBFestimate(im_nrs)' ,'r','LineWidth',1)
-    plot(1:length(im_nrs),cross_NBFestimate(im_nrs)' ,'r.','MarkerSize',20)
+    plot(1:length(im_nrs),cross_OVestimate(im_nrs,ov_exp_used)' ,'r','LineWidth',1)
+    plot(1:length(im_nrs),cross_OVestimate(im_nrs,ov_exp_used)' ,'r.','MarkerSize',20)
     xlim([0 length(im_nrs)+1]),ylim([0 max(max(ecog_g_err(:,im_nrs)))])
     set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
 
 %     % Plot gamma model predictions for the two prfs
     subplot(length(electrodes),6,6*ll-4),hold on
-    bar(1:length(im_nrs),cross_NBFestimate(im_nrs),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    bar(1:length(im_nrs),cross_OVestimate(im_nrs,ov_exp_used),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     xlim([0 length(im_nrs)+1]),ylim([0 max(max(ecog_g_err(:,im_nrs)))])
     set(gca,'XTick',1:length(im_nrs),'XTickLabel',im_nrs)
     
@@ -313,13 +310,14 @@ for kk = 1:length(im_nrs)
     c.th = linspace(0,2*pi, numPoints);
     % 1 sd
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
-    plot(c.x + orig_y, c.y + orig_x, 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    plot(c.x + orig_y, c.y + orig_x, 'r','LineWidth',1) % this is just reversed because plot and imagesc are opposite, checked this with contour
     % 2 sd
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*2*orig_sigma);
-    plot(c.x + orig_y, c.y + orig_x, 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
-%     xlim([orig_y-2*orig_sigma orig_y+2*orig_sigma])
-%     ylim([orig_x-2*orig_sigma orig_x+2*orig_sigma])
-    title(['im ' int2str(im_nrs(kk))])
+    plot(c.x + orig_y, c.y + orig_x, 'r:','LineWidth',1) % this is just reversed because plot and imagesc are opposite, checked this with contour
+%     xlim([orig_y-3*orig_sigma orig_y+3*orig_sigma])
+%     ylim([orig_x-3*orig_sigma orig_x+3*orig_sigma])
+    axis off
+    ylabel(['im ' int2str(im_nrs(kk))])
     
     % contrast images + prf
     subplot(length(electrodes),6,6*ll-2+kk)
@@ -330,7 +328,8 @@ for kk = 1:length(im_nrs)
     numPoints = 50;
     c.th = linspace(0,2*pi, numPoints);
     [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
-    plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
+    plot(c.x + seed_params(2), c.y + seed_params(1),'r','LineWidth',1) % this is just reversed because plot and imagesc are opposite, checked this with contour
+    axis off
 %     xlim([seed_params(2)-2*seed_params(3) seed_params(2)+2*seed_params(3)])
 %     ylim([seed_params(1)-2*seed_params(3) seed_params(1)+2*seed_params(3)])
    
@@ -338,7 +337,13 @@ end
 
 end
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
         ['PrfSizeEffects_allsub_' analysisType '_' modelType]))
-print('-dpng','-r300',fullfile(dataDir,'soc_bids','derivatives','gaborFilt','prfSizeEffects',...
+print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
         ['PrfSizeEffects_allsub_' analysisType '_' modelType]))
+
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
+%         ['PrfSizeEffects_allsub_' analysisType '_' modelType '_zoom']))
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','prfSizeEffects',...
+%         ['PrfSizeEffects_allsub_' analysisType '_' modelType '_zoom']))

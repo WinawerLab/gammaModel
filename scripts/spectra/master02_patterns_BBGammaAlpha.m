@@ -24,7 +24,7 @@ analysisType = 'spectra200';
 % analysisType = 'spectraRERP200';
 
 subj = subjects(s);
-dataName = fullfile(dataDir,'soc_bids',['sub-' int2str(subj)],'ses-01','derivatives','ieeg',...
+dataName = fullfile(dataDir,['sub-' int2str(subj)],'ses-01','derivatives','ieeg',...
     ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '.mat']);
 load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','include_channels')   
 
