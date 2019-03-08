@@ -3,10 +3,10 @@
 % model. Original code for images processing was developed by Kendrick Kay
 % (PLOS Computational Biology, 2013).
 %
-% Images are from: - "Fred informed me that the citation for this database
-% should be: Olmos, A., Kingdom, F. A. A. (2004), A biologically inspired
-% algorithm for the recovery of shading and reflectance images, Perception,
-% 33, 1463 - 1473. "
+% The citation for these images should be: Olmos, A., Kingdom, F. A. A.
+% (2004), A biologically inspired algorithm for the recovery of shading and
+% reflectance images, Perception, 33, 1463 - 1473.
+% 
 %
 % Images are: 
 % - converted to luminance values, convert to grayscale using [.3, .59, .11] for the RGB channels (rgb2gray.m) 
