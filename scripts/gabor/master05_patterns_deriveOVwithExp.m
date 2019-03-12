@@ -37,13 +37,13 @@ if subj == 9
 elseif subj == 19
     im_deg = rad2deg(atan(17.9./50));
     electrodes = [107 108 109 115 120 121]; % S1
-elseif subj==23
+elseif subj == 23
     im_deg = rad2deg(atan(17.9./36));
     % electrodes = [53 54]; % S2
-elseif subj==24
+elseif subj == 24
     im_deg = rad2deg(atan(17.9./45));
     electrodes = [45 46]; % S3
-elseif subj==1001
+elseif subj == 1001
     im_deg = rad2deg(atan(20./60));
     electrodes = [49 50 51 52 57 58 59 60]; % S1001 V1, V2, V3
 end
@@ -63,9 +63,6 @@ for el = 1:length(electrodes)
     [v_area] = subj_prf_info(subj,elec);
 
     % Choose an analysis type:
-%     analysisType = 'spectraRERP500';
-    % analysisType = 'spectra';
-%     analysisType = 'spectra500';
     analysisType = 'spectra200';
     
     % Load ECoG data:
@@ -84,8 +81,7 @@ for el = 1:length(electrodes)
     modelType = 'fitSOCbbpower2';
     load(fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-        'seeds',...
-        'cross_SOCparams','cross_SOCestimate')
+        'seeds','cross_SOCparams','cross_SOCestimate')
     % take the median of the fitting parameters, is this good?
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange c min at 0
     cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange c max at 1
@@ -109,12 +105,10 @@ for el = 1:length(electrodes)
     % Initalize outputs:
     cross_OVparams = zeros(size(ecog_bb,1),5,length(ov_exponents));
     cross_OVestimate = zeros(size(ecog_bb,1),1,length(ov_exponents));
+    train_OVperformance = zeros(size(ecog_bb,1),length(ov_exponents));
     
     % Estimate gain, leave one out every time for cross validation
     for ii = 1:length(ov_exponents)
-        % Set the seed parameters:
-        %use sigma./sqrt(n) for size
-        % seed_params = [medianParams(1:2) medianParams(3)./sqrt(medianParams(5)) 1];
         % derive size from eccentricity
         seed_params = [medianParams(1:2) prf_s_pix 1 ov_exponents(ii)];    
 
@@ -125,7 +119,10 @@ for el = 1:length(electrodes)
             % run model through training stimuli
             [~,modelfit] = helpfit_OVexp(stimulus(trainSet,:),seed_params,[],[]);
             % get the gain
-            B = regress(mean(ecog_g(trainSet,:),2),modelfit);
+            [B] = regress(mean(ecog_g(trainSet,:),2),modelfit);
+            
+            % get training performance
+            train_OVperformance(kk,ii) = calccod(B*modelfit,mean(ecog_g(trainSet,:),2),[],0,0);
 
             % put estimated model parameters in matrix to save
             cross_OVparams(kk,:,ii) = [seed_params(1:3) B seed_params(5)];
@@ -139,9 +136,7 @@ for el = 1:length(electrodes)
 
     save(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_OVsimple']),...
-        'seed_params',...
-        'cross_OVparams','cross_OVestimate')
-    % OVexp uses derived prf size from eccentricity as seed for size
+        'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
     
     disp(['Done fitting OV model for subj ' int2str(subj) ' el ' int2str(elec)])
     
@@ -169,8 +164,7 @@ res = sqrt(size(stimulus,2)/8);
 % load model fit
 load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-        'seed_params',...
-        'cross_OVparams','cross_OVestimate')
+        'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance');
 
 % load ecog data:
 dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
@@ -211,8 +205,6 @@ print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
 
 %% Display model results for all electrodes, all subjects
 
-ov_exponents = [.1:.1:1];
-
 %%%%% Subjects/electrodes:
 subject_ind = [19 19 19 19 19 19  ... % S1
     24 24 ... % S2
@@ -233,32 +225,31 @@ for ll = 1:length(electrodes)
     analysisType = 'spectra200';
     modelType = 'OVsimple';
 
-    res = sqrt(size(stimulus,2)/8);
+    res = sqrt(size(stimulus,2)/8); % filtered stimulus resolution, assuming 8 orientations
 
-    % Load model fit:
+    %%%%% Load model fit:
     load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-            'seed_params',...
-            'cross_OVparams','cross_OVestimate')
+            'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
 
-    % Load ecog data:
+    %%%%% Load ecog data:
     dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
         'ses-01','derivatives','ieeg',...
         ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
-    % Gamma power percent signal change:
+    %%%%% Gamma power percent signal change:
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
     ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
         squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
-
+    % Calculate ylims for gamma range:
     ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
-
-    subplot(8,1,plot_nr),hold on
     
+    %%%%% Make plot for this electrode:
+    subplot(8,1,plot_nr),hold on   
     bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_g_err,'k');
-%     plot(cross_NBFestimate','r','LineWidth',2)
+    % Add gamma estimate (cross validated):
     plot(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),'r','LineWidth',2)
     % Plot stimulus cutoffs:
     stim_change = [38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
@@ -269,37 +260,36 @@ for ll = 1:length(electrodes)
     set(gca,'XTick',[])
     ylabel('gamma')
     
-    % plot model performance
+    %%%%% Add model performance in label
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
     ylabel(['el' int2str(elec) ' R^2=' int2str(r2)])
     
     if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
-        % save the figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
-                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
-                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+%         % Save the figure
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+%                 [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+%                 [analysisType '_elset' int2str(figure_nr) '_' modelType]))
 
-        % and make a new figure
+        % Make a new figure
         figure_nr = figure_nr +1;
         figure('Position',[0 0 470 600])
         % reset the subplot number
         plot_nr = 0;
 %         
     elseif ll==length(electrodes)% save figure after last electrode
-        % save the last figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
-                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
-                [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+        % Save the last figure
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+%                 [analysisType '_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+%                 [analysisType '_elset' int2str(figure_nr) '_' modelType]))
     end
     
 end
  
 %% Look at where the Gaussian is for all electrodes
-ov_exponents = [.1:.1:1];
 
 %%%%% Subjects/electrodes:
 subject_ind = [19 19 19 19 19 19  ... % S1
@@ -325,8 +315,7 @@ for ll = 1:length(electrodes)
     % Load model fit:
     load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-            'seed_params',...
-            'cross_OVparams','cross_OVestimate')
+            'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
 
     %%% LOOK AT WHERE THE GAUSSIAN IS
     subplot(8,1,plot_nr) % NO HOLD ON HERE, only after imagesc, otherwise Y axis inverted
@@ -372,8 +361,6 @@ end
 
 %%
 %% Plot model performance
-% Exponents
-ov_exponents = [.1:.1:1];
 
 %%%%% Loop over electrodes and subjects:
 subject_ind = [19 19 19 19 19 19  ... % S1
@@ -384,9 +371,11 @@ electrodes = [107 108 109 115 120 121 ... % S1
     49 50 52 57 58 59 60]; % S3
 
 % COD output size electrodes X 2
-% column 1: mean subtracted COD
-% column 2: no mean subtracted COD
-nbf_cod = zeros(length(electrodes),2); 
+% column 1: no mean subtracted COD
+% column 2: mean subtracted COD
+model_cod = zeros(length(electrodes),2,10); 
+% column 1: no mean subtracted COD
+train_cod = zeros(length(electrodes),1,10); 
 
 % Loop to get COD for all electrodes:
 for ll = 1:length(electrodes)
@@ -402,8 +391,7 @@ for ll = 1:length(electrodes)
     % Load model fit:
     load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-            'seed_params',...
-            'cross_OVparams','cross_OVestimate')
+            'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
 
     % Load ecog data:
     dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
@@ -414,40 +402,59 @@ for ll = 1:length(electrodes)
     % Gamma power percent signal change:
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
     
-    % Calculate leave-one-out coefficient of determination
-    for ii = 1:size(cross_OVestimate,3)
+    % Calculate coefficient of determination
+    for ii = 1:length(ov_exponents)
+        % Cross validated leave-one-out performance
         % mean subtracted:
-        nbf_cod(ll,1,ii) = calccod(cross_OVestimate(:,:,ii),ecog_g,[],0,1); 
+        model_cod(ll,1,ii) = calccod(cross_OVestimate(:,:,ii),ecog_g,[],0,0); 
         % no mean subtracted:
-        nbf_cod(ll,2,ii) = calccod(cross_OVestimate(:,:,ii),ecog_g,[],0,0); 
+        model_cod(ll,2,ii) = calccod(cross_OVestimate(:,:,ii),ecog_g,[],0,1); 
+        
+        % Calculate mean training performance 
+        train_cod(ll,1,ii) = mean(train_OVperformance(:,ii));
     end
+    
 end
 
 figure('Position',[0 0 300 500])
-for ii = 1:size(cross_OVestimate,3)
+for ii = 1:length(ov_exponents)
     subplot(2,1,1),hold on
-    bar(ii,mean(nbf_cod(:,1,ii)),'w')
-    plot(ii+(1:length(electrodes))/50,nbf_cod(:,1,ii),'k.')
+    bar(ii,mean(model_cod(:,1,ii)),'w')
+    plot(ii+(1:length(electrodes))/50,model_cod(:,1,ii),'k.')
     set(gca,'XTick',1:size(cross_OVestimate,3),'XTickLabel',ov_exponents)
-    ylabel('COD-mean')
+    ylabel('COD')
     xlim([0 size(cross_OVestimate,3)+1]),%ylim([0 100])  
     
     subplot(2,1,2),hold on
-    bar(ii,mean(nbf_cod(:,2,ii)),'w')
-    plot(ii+(1:length(electrodes))/50,nbf_cod(:,2,ii),'k.')
-    set(gca,'XTick',1:size(cross_OVestimate,3),'XTickLabel',ov_exponents)
-    ylabel('COD')
-    xlim([0 size(cross_OVestimate,3)+1]),ylim([0 100])
+    bar(ii,mean(model_cod(:,2,ii)),'w')
+    plot(ii+(1:length(electrodes))/50,model_cod(:,2,ii),'k.')
+    set(gca,'XTick',1:length(ov_exponents),'XTickLabel',ov_exponents)
+    ylabel('COD-mean')
+    xlim([0 length(ov_exponents)+1]),ylim([0 100])
     xlabel('n in variance^n')
 end
-
-disp(['mean OV model performance is ' num2str(mean(nbf_cod(:,2,ov_exponents==.5)))])
+disp(['mean OV model performance at n=.5: ' num2str(mean(model_cod(:,1,ov_exponents==.5)))])
 
 % set(gcf,'PaperPositionMode','auto')
 % print('-depsc','-r300',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
 %         ['OV_CODcross_' analysisType '_allel_' modelType]))
 % print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
 %         ['OV_CODcross_' analysisType '_allel_' modelType]))
+
+
+% check training performance
+figure('Position',[0 0 300 500])
+for ii = 1:length(ov_exponents)
+    subplot(2,1,1),hold on
+    bar(ii,mean(train_cod(:,1,ii)),'w')
+    plot(ii+(1:length(electrodes))/50,train_cod(:,1,ii),'k.')
+    set(gca,'XTick',1:length(ov_exponents),'XTickLabel',ov_exponents)
+    ylabel('train performance COD')
+    xlim([0 length(ov_exponents)+1]),%ylim([0 100])  
+
+    xlabel('n in variance^n')
+end
+
 
 
 
