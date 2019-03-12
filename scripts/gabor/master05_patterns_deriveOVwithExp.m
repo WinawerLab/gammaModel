@@ -456,8 +456,6 @@ for ii = 1:length(ov_exponents)
 end
 
 
-
-
 %% Make Figure 6: 
 %% gamma/OV model in 6 example electrodes and average across subjects
 

@@ -1,4 +1,4 @@
-function [v_area,xys,roi_labels] = subj_prf_info(subj_nr,elec)
+function [v_area,roi_labels,xys] = subj_prf_info(subj_nr,elec)
 %
 % Function loads fits from pRF experiment from Jon Winawer and visual
 % cortex area assigned from anatomy
@@ -49,7 +49,7 @@ switch subj_nr
             case 122
                 v_area = [5];%V3B dorsal
         end
-        
+        load(fullfile(gammaModelDataPath,'sourcedata','ECoG_pRF',[int2str(subj_nr) '_pRFbb_chan' int2str(elec) '.mat']));
     case 23
         switch elec
             case 53
@@ -63,6 +63,7 @@ switch subj_nr
             case 46
                 v_area = 2;%v1 ventral
         end
+        load(fullfile(gammaModelDataPath,'sourcedata','ECoG_pRF',[int2str(subj_nr) '_pRFbb_chan' int2str(elec) '.mat']));
      case 1001
         switch elec
             case 37
