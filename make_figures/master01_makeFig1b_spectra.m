@@ -1,4 +1,8 @@
-% This script makes the spectra for example electrodes.
+% This script generate the power spectra for example electrodes as shown in
+% Figure 1B from:
+% Hermes D, Petridou N, Kay K, Winawer J. 2019 An image-computable model
+% for the stimulus selectivity of gamma oscillations. bioRxiv doi:
+% https://doi.org/10.1101/583567
 %
 % dhermes 2019 UMC Utrecht
 

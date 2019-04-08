@@ -1,51 +1,75 @@
+% This script will calculate the spectral power changes for all ECoG data
+% reported in: 
+% Hermes D, Petridou N, Kay K, Winawer J. 2019 An image-computable model
+% for the stimulus selectivity of gamma oscillations. bioRxiv doi:
+% https://doi.org/10.1101/583567
+%
+% dhermes 2019 UMC Utrecht
+
 clear all
 
-addpath('~/Documents/git/ecogBasicCode/')
-addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
-addpath(genpath('/Users/dorahermes-miller/Documents/m-files/knkutils'));
+% set paths:
+gammaModelCodePath;
+dataDir = gammaModelDataPath;
+
+% add other toolboxes:
+addpath(genpath('/Users/dora/Documents/git/ecogBasicCode/'));
+addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 %% epoch 
-% NOTE: later add exclusion bad epochs
 
-clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
-
-subjects = {19,24,1001};
+subjects = {'19','24','1001'};
 
 for s = 1:length(subjects)
 % subject name
 subj = subjects{s};
-dataName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_ieeg_preproc.mat']);
-stimName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_events.tsv']);
+dataName = dir([dataDir '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-soc_run-*_ieeg_preproc.mat']);
+stimName = dir([dataDir '/sub-' subj '/ses-01/ieeg/sub-' subj '_ses-01_task-soc_run-*_events.tsv']);
 nr_runs = length(dataName);
 
 for data_nr = 1:nr_runs
     %%%% load preprocessed data
-    load([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' dataName(data_nr).name]);
+    load([dataDir '/sub-' subj '/ses-01/ieeg/' dataName(data_nr).name]);
     
     %%%% load stimulus information
-    stim = readtable([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/' stimName(data_nr).name],...
+    stim = readtable([dataDir '/sub-' subj '/ses-01/ieeg/' stimName(data_nr).name],...
         'FileType','text','Delimiter','\t');
 
-    %%%% notch filter data at 60, 120 and 180 Hz
-    data = ecog_notch(data,srate);
+    %%%% notch filter data from subject 1 and 2 at 60, 120 and 180 Hz
+    if ismember(subj,{'19','24'})
+        data = ecog_notch(data,srate);
+    else
+        disp('no notch filter, data are clean')
+    end
     
     %%%% make epochs
-    onset_trial = round(stim.onset*srate);%from seconds to samples
-    epoch_l = 1.2; % epoch length: -0.2:1 sec
-    data_epoch = zeros(size(data,2),length(onset_trial),epoch_l*srate);
-    for elec = 1:size(data,2)
-        for l = 1:length(onset_trial)
-            data_epoch(elec,l,:) = ...
-                data(onset_trial(l)-.2*srate+1:onset_trial(l)+(epoch_l-.2)*srate,elec)';
+    if ismember(subj,{'19','24'})
+        onset_trial = round(stim.onset*srate);%from seconds to samples
+        epoch_l = 1.2; % epoch length: -0.2:1 sec
+        data_epoch = zeros(size(data,2),length(onset_trial),epoch_l*srate);
+        for elec = 1:size(data,2)
+            for l = 1:length(onset_trial)
+                data_epoch(elec,l,:) = ...
+                    data(onset_trial(l)-.2*srate+1:onset_trial(l)+(epoch_l-.2)*srate,elec)';
+            end
         end
+        % define t - time vector for each epoch
+        t = [1:epoch_l*srate]/srate - 0.2;    
+    elseif ismember(subj,{'1001'})
+        %%%% make epochs
+        onset_trial = round(stim.onset*srate);%from seconds to samples
+        epoch_l = 1.25; % epoch length: -0.25:1 sec
+        data_epoch = zeros(size(data,2),length(onset_trial),epoch_l*srate);
+        for elec = 1:size(data,2)
+            for l = 1:length(onset_trial)
+                data_epoch(elec,l,:) = ...
+                    data(onset_trial(l)-.25*srate+1:onset_trial(l)+(epoch_l-.25)*srate,elec)';
+            end
+        end
+        % define t - time vector for each epoch
+        t = [1:epoch_l*srate]/srate - 0.25; 
     end
-    % define t - time vector for each epoch
-    t = [1:epoch_l*srate]/srate - 0.2;    
-
-    %%%% baseline correct
-    % data_epoch = ecog_baselinesubtract(data_epoch,t>-.1 & t<0);
-
+    
     %%%% calculate spectra
     fft_w = window(@hann,200); % window width
     fft_ov = 100; % overlap
@@ -64,34 +88,11 @@ for data_nr = 1:nr_runs
     stim_epoch_off = stim.trial_type(stim.trial_type==87);
 
     disp(['done run ' int2str(data_nr)])
-    
-    % Do not regress ERP out for each stimulus, better to take 200-500 ms
-    % window.
-    
-    % SETTINGS: fft_w = window(@hann,300), fft_ov = 100, reg_erp = 0, fft_t = t>=0.2 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra.mat'];
-
-    % SETTINGS: fft_w = window(@hann,300), fft_ov = 100, reg_erp = 1, fft_t = t>=0.2 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectraRERP.mat'];
-
-    % SETTINGS: fft_w = window(@hann,500), fft_ov = 100, reg_erp = 0, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra500.mat'];
-
-    % SETTINGS: fft_w = window(@hann,500), fft_ov = 100, reg_erp = 1, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectraRERP500.mat'];
-
+        
     % SETTINGS: fft_w = window(@hann,200), fft_ov = 100, reg_erp = 0, fft_t = t>=0 & t<.5
-    saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra200.mat'];
+    saveName = fullfile(dataDir,'derivatives',['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_task-soc_run-' int2str(data_nr) '_spectra200.mat']);
     
-    % SETTINGS: fft_w = window(@hann,200), fft_ov = 100, reg_erp = 1, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectraRERP200.mat'];
-
-    % SETTINGS: fft_w = window(@hann,100), fft_ov = 50, reg_erp = 0, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra100.mat'];
-
-    % SETTINGS: fft_w = window(@hann,300), fft_ov = 150, reg_erp = 0, fft_t = t>=0 & t<.5
-%     saveName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_run-' int2str(data_nr) '_spectra300.mat'];
-
     save(saveName,'f','data_epoch_spectra','stim_epoch','data_epoch_spectra_off','stim_epoch_off','exclude_channels','include_channels')   
     
 end % end run loop
@@ -107,14 +108,7 @@ dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
 
 subjects = [19,23,24];
 
-% analysisType = 'spectra';
-% analysisType = 'spectraRERP';
-% analysisType = 'spectra500';
-% analysisType = 'spectraRERP500';
-% analysisType = 'spectra200';
-analysisType = 'spectraRERP200';
-% analysisType = 'spectra100';
-analysisType = 'spectra300';
+analysisType = 'spectra200';
 
 for s = 1:length(subjects)
     % subject name
@@ -151,17 +145,10 @@ end
 %%
 clear all
 dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
-subjects = [19,23,24,1001];
+subjects = [19,24,1001];
 s = 4;
 
-% analysisType = 'spectra';
-% analysisType = 'spectra500';
-% analysisType = 'spectra300';
 analysisType = 'spectra200';
-% analysisType = 'spectra100';
-% analysisType = 'spectraRERP';
-% analysisType = 'spectraRERP500';
-% analysisType = 'spectraRERP200';
 
 subj = subjects(s);
 dataName = [dataRootPath '/sub-' int2str(subj) '/ses-01/derivatives/ieeg/sub-' int2str(subj) '_task-soc_allruns_' analysisType '.mat'];
