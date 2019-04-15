@@ -22,6 +22,7 @@ addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
 subjects = {'19','24','1001'};
 electrodes = {109,45,50}; % example electrodes per subject
+% electrodes = {109,45,51}; % example electrodes per subject
 analysisType = 'spectra200';
 
 figure('Position',[0 0 500 150]),hold on
@@ -31,8 +32,8 @@ for s = 1:length(subjects)
     elec = electrodes{s};
 
     % load all data:
-    dataName = fullfile(dataDir,['sub-' subj],'ses-01','derivatives','ieeg',...
-        ['sub-' subj '_task-soc_allruns_' analysisType '.mat']);
+    dataName = fullfile(dataDir,'derivatives','preprocessing',['sub-' subj],'ses-01','ieeg',...
+        ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '.mat']);
     load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','include_channels')   
 
     % get data for this electrode

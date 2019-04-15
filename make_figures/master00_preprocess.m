@@ -19,7 +19,7 @@ addpath('~/Documents/git/JSONio/')
 
 subjects = {'19','24','1001'};
 
-for s = 1%:length(subjects)
+for s = 1:length(subjects)
     % subject name
     subj = subjects{s};
     dataName = dir(fullfile(dataDir,['sub-' subj],['ses-01'],'ieeg',...
@@ -38,7 +38,7 @@ for s = 1%:length(subjects)
             dataName(data_nr).name));
         data_hdr = ft_read_header(fullfile(dataDir,['sub-' subj],'ses-01','ieeg',...
             dataName(data_nr).name));
-         srate = round(data_hdr.Fs); % get sampling frequency
+        srate = round(data_hdr.Fs); % get sampling frequency
 
         %%%% get channel info 
         disp(['loading channels.tsv set ' int2str(data_nr)])
@@ -64,11 +64,11 @@ for s = 1%:length(subjects)
         [data] = ecog_CarRegress(data,include_channels);
        
         % resample / cut awkward sampling rates down to 1000 Hz
-        if ismember('24',{'19','24'})
+        if ismember(subj,{'19','24'})
             s = srate*(1000/1031)*(1000/1480); 
             disp(['downsampling to ' int2str(s) ' Hz'])
-            data = resample(data,1000,1031);
-            data = resample(data,1000,1480);
+            data = resample(data',1000,1031)';
+            data = resample(data',1000,1480)';
             srate = floor(s); clear s
             disp('data downsampled')
         end
