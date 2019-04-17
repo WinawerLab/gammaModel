@@ -38,7 +38,7 @@ cm2(30:100,3) = [0.7:(1-0.7)/70:1]';
 cm2(30:100,2) = [0:1/70:1]';
 cm = [cm2(end:-1:1,:); cm1];
 
-for s = 2:length(subjects)
+for s = 1:length(subjects)
 
     % subject name
     subj = subjects{s};
@@ -108,7 +108,7 @@ for s = 2:length(subjects)
     S1b = mean(S1b,1);
 
     params.trialave = 0;
-    figure('Color',[1 1 1],'Position',[0 0 350 250])
+    figure('Color',[1 1 1],'Position',[0 0 260 170])
     %%%%% all responses:
     for kk = 1:length(conds_plot)
         data2use = squeeze(data_temp(ismember(stim_all,conds_plot{kk}),:))';
