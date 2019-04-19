@@ -116,6 +116,8 @@ for ll = 1:length(electrodes)
     SOCestimate_all(ll,:) = cross_SOCestimate;
 end
 
+disp(['mean OV model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
+
 %%
 %%
 

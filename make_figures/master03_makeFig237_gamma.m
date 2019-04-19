@@ -89,6 +89,9 @@ for ll = 1:length(electrodes)
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
     OV_COD_all(ll) = r2;
 end 
+
+disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
+
 %%
 
 % Plot the mean gamma power across all electrodes (Figure 3b)
