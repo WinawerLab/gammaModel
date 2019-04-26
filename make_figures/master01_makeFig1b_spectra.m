@@ -26,7 +26,7 @@ analysisType = 'spectra200';
 
 figure('Position',[0 0 500 150]),hold on
 
-for s = 1:length(subjects)
+for s = 1%:length(subjects)
     subj = subjects{s};
     elec = electrodes{s};
 
@@ -60,14 +60,15 @@ for s = 1:length(subjects)
     subplot(1,3,s),hold on
     fill([f; f(end:-1:1)],...
         [quantile(data_base_boot,.16) quantile(data_base_boot(:,end:-1:1),.84)],...
-        [.5 .5 .5])
+        [0 1 0]);%[.5 .5 .5])
 
     % mean baseline for fit
     data_base = mean(data_fft_off,1); % baseline
     [out_exp,bb_amp,gamma_amp,gamma_freq,gamma_width,fit_f2] = ...
         ecog_fitgamma(f,f_use4fit,data_base,data_base);
     plot(f,10.^(out_exp(2)-out_exp(1)*log10(f)),'k:','LineWidth',1)
-
+    
+    resamp_parms = NaN(length(stims_plot),6);
     for k = 1:length(stims_plot)
         % get stimulus data
         data_fit = data_fft(stims==stims_plot(k),:); % stimuli
@@ -113,11 +114,11 @@ for s = 1:length(subjects)
     set(gca,'xscale','log','yscale','log','TickLength',[0.05 .1])
     xlabel('Frequency (Hz)'),ylabel('Power')
 end
-
-set(gcf,'PaperPositionMode','auto')
-print('-dpng','-r300',fullfile(dataDir,'derivatives','figures',...
-    ['Figure1B']))
-print('-depsc','-r300',fullfile(dataDir,'derivatives','figures',...
-    ['Figure1B']))
-
+% 
+% set(gcf,'PaperPositionMode','auto')
+% print('-dpng','-r300',fullfile(dataDir,'derivatives','figures',...
+%     ['Figure1B']))
+% print('-depsc','-r300',fullfile(dataDir,'derivatives','figures',...
+%     ['Figure1B']))
+% 
 

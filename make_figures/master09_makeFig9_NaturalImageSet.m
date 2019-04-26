@@ -189,8 +189,8 @@ for ll = 1:length(electrodes)
     analysisType = 'spectra200';
     
     % load SOC model fit
-    modelType = 'fitSOCbbpower2';    
-    load(fullfile(dataDir,'derivatives','gaborFilt','fitSOCbb',...
+    modelType = 'fitSOCbbpower';    
+    load(fullfile(dataDir,'derivatives','gaborFilt','SOC_broadband',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'cross_SOCparams')
     % get median model parameters
@@ -200,9 +200,9 @@ for ll = 1:length(electrodes)
     socParams_all(ll,:) = median(cross_SOCparams);
     
     % load OV model fit
-    modelType = 'OVsimple';   
+    modelType = 'OVmodel';   
     ov_exponents = [.1:.1:1];
-    load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','OV_gamma',...
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'cross_OVparams')   
     % get median model parameters and plot prediction
@@ -267,18 +267,17 @@ for example_elec1 = 1:length(electrodes) % electrodes
     title(['electrode ' int2str(example_elec1)])
 end
  
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','natural',...
-%         ['NaturalImages_AllElectrodes']))
-% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
-%         ['NaturalImages_AllElectrodes']))
-
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['FigureS10_NaturalImages_AllElectrodes']))
+print('-dpng','-r300',fullfile(dataDir,'derivatives','figures',...
+        ['FigureS10_NaturalImages_AllElectrodes']))
 
 %% Figure 8 with SOC vs OV predictions for two example electrodes
 
 example_elecs = {3,8}; 
-example_images_all = {[68 493],[231 143]}; % previous: [689 is more plaid-like];%
-example_imcolors = {[.2 .2 1],[0 .8 .1]};
+example_images_all = {[493 68],[143 231]}; % previous: [689 is more plaid-like];%
+example_imcolors = {[0 .8 .1],[.2 .2 1]};
 
 figure('Position',[0 0 600 400]),hold on
 
@@ -333,13 +332,13 @@ for ee = 1:length(example_elecs)
         [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*orig_sigma);
         plot(c.x + orig_y, c.y + orig_x, 'Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
         [c.x, c.y] = pol2cart(c.th, 2*ones(1,numPoints)*orig_sigma);
-        plot(c.x + orig_y, c.y + orig_x,'--','Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
+        plot(c.x + orig_y, c.y + orig_x,':','Color',example_imcolors{kk},'LineWidth',2) % this is just reversed because plot and imagesc are opposite, checked this with contour
         title(['im nr ' int2str(example_images(kk))])
     end
-end
 
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','gaborFilt','natural',...
-%         ['NaturalImages_ExampleEl' int2str(example_elec1)]))
-% print('-dpng','-r300',fullfile(dataDir,'derivatives','gaborFilt','natural',...
-%         ['NaturalImages_ExampleEl' int2str(example_elec1)]))
+end
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure9_NaturalImages_ExampleElecs']))
+print('-dpng','-r300',fullfile(dataDir,'derivatives','figures',...
+        ['Figure9_NaturalImages_ExampleElecs']))

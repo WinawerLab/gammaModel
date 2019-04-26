@@ -86,7 +86,7 @@ for s = 1:3
             ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
         load(dataFitName)
 
-        % Broadband power perecent signal change, one value per image:
+        % Broadband power percent signal change, one value per image:
         bb_base = resamp_parms(1,1,6); % The baseline is the same for resamp_parms(:,:,6)
         ecog_bb = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
 
