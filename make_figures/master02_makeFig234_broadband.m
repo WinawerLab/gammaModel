@@ -121,6 +121,8 @@ disp(['mean OV model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
 %%
 %%
 
+ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
+
 % Plot the mean broadband power across all electrodes (Figure 3a)
 figure('Position',[0 0 470 600])
 subplot(8,1,1),hold on
@@ -140,13 +142,12 @@ xlim([0 87])
 ylabel(['average'])
 ylim([min(bb_group_low)-10 max(bb_group_up)+10])
 
-% save Figure 3a
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3a_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3a_' modelType]))
-    
+% % save Figure 3a
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure3a_' modelType]))
+% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure3a_' modelType]))     
 
 % Plot example electrodes (Figure 4)
 example_els = [3 5 7 8 9 14];
@@ -173,12 +174,13 @@ for ll = 1:length(example_els)
     ylabel(['el' int2str(elec) ' R^2=' int2str(socCOD_all(example_els(ll),2))])
 
 end
-% save Figure 4
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure4_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure4_' modelType]))
+
+% % save Figure 4
+% set(gcf,'PaperPositionMode','auto')
+% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure4_' modelType]))
+% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure4_' modelType]))
 
 
 %% Figures S6-7: all electrodes all subjects
@@ -254,11 +256,11 @@ for ll = 1:length(electrodes)
 
     if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
         % save the figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
 
         % and make a new figure
         figure_nr = figure_nr +1;
@@ -268,11 +270,11 @@ for ll = 1:length(electrodes)
         
     elseif ll==length(electrodes)% save figure after last electrode
         % save the last figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
     end
 end
 
