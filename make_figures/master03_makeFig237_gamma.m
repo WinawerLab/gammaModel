@@ -54,6 +54,8 @@ OVparams_all = zeros(length(electrodes),5);
 OVestimate_all = zeros(length(electrodes),86);
 ecog_g_all = zeros(length(electrodes),86);
 ecog_g_err_all = zeros(length(electrodes),2,86);
+ecog_g_base = zeros(length(electrodes),1);
+ecog_g_err_base = zeros(length(electrodes),2,1);
 
 for ll = 1:length(electrodes)
     
@@ -73,10 +75,14 @@ for ll = 1:length(electrodes)
     OVparams_all(ll,:) = median(cross_OVparams(:,:,ov_exponents==.5),1);
     OVestimate_all(ll,:) = cross_OVestimate(:,:,ov_exponents==.5);
     
-    % Load ecog data:
+    % Load ecog stimulus data:
     dataFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
+    % Load ecog baseline data:
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+        ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
+    load(dataBaseFitName)
 
     % Gamma power percent signal change:
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
@@ -84,6 +90,10 @@ for ll = 1:length(electrodes)
         squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
     ecog_g_all(ll,:) = ecog_g;
     ecog_g_err_all(ll,:,:) = ecog_g_err;
+    
+    ecog_g_base(ll) = 100*(mean(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1,2));
+    ecog_g_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
+        squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
 
     % model performance (no mean subtracted)
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
@@ -98,30 +108,43 @@ disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
 figure('Position',[0 0 600 600])
 subplot(8,5,2:5),hold on
 
+% plot stimulus data and error:
 bar(mean(ecog_g_all,1),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0],'LineWidth',1);
 g_group_err = std(ecog_g_all,1)./sqrt(size(ecog_g_all,1));
 g_group_up = mean(ecog_g_all,1)+g_group_err;
 g_group_low = mean(ecog_g_all,1)-g_group_err;
 plot([1:86; 1:86],[g_group_up; g_group_low],'k');
-% plot(mean(SOCestimate_all,1)','r','LineWidth',2)
+
+% plot baseline gamma and sterr
+g_base_mean = mean(ecog_g_base,1);
+g_base_err = std(ecog_g_base,1)./sqrt(size(ecog_g_base,1));
+g_base_up = mean(ecog_g_base,1)+g_base_err;
+g_base_low = mean(ecog_g_base,1)-g_base_err;
+plot([1 86],[g_base_mean; g_base_mean],'-','Color',[.5 .5 .5]);
+plot([1 86],[g_base_up; g_base_up],':','Color',[.5 .5 .5]);
+plot([1 86],[g_base_low; g_base_low],':','Color',[.5 .5 .5]);
+
+ylims = [min(g_group_low(:)) max(g_group_up(:))];
+
 % plot stimulus cutoffs
 stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
 for k = 1:length(stim_change)
     plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
 end
+
 set(gca,'XTick',[])
 xlim([0 87])
 ylabel(['average'])
 ylim([min(g_group_low)-10 max(g_group_up)+10])
 % save Figure 3b
 set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3b_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3b_' modelType]))
+% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure3b_' modelType]))
+% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%         ['Figure3b_' modelType]))
 
-
-% plot example electrodes and average across electrodes
+%%
+%%%%%% plot example electrodes and average across electrodes
 % example electrodes
 example_els = [3 5 7 8 9 14];
 
@@ -153,6 +176,12 @@ for ll = 1:length(example_els)
     bar(ecog_g_all(example_els(ll),:),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],squeeze(ecog_g_err_all(example_els(ll),:,:)),'k');
     plot(OVestimate_all(example_els(ll),:)','r','LineWidth',2)
+    
+    % plot baseline esimates:
+    plot([1 86],[ecog_g_base(example_els(ll)) ecog_g_base(example_els(ll))],'-','Color',[.5 .5 .5]);
+    plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
+    plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
+    
     % set ylim
     ylims = [min(min(ecog_g_err_all(example_els(ll),:,:))) max(max(ecog_g_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
