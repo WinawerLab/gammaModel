@@ -75,7 +75,7 @@ for s = 3
 
     res = sqrt(size(imEnergyMean,2));  % resolution of the pre-processed stimuli
 
-    for el = 4:length(electrodes)
+    for el = 5:length(electrodes)
         elec = electrodes(el);
 
         % Choose an analysis type:
