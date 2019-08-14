@@ -36,9 +36,9 @@ nrOrientations = 8;
 res = sqrt(size(stimulus,2)/nrOrientations);  % resolution of the pre-processed stimuli
 
 %%
-%% Make Figure 3 and 7: 
-% Figure 3: gamma average across subjects 
-% Figure 7: gamma/OV model in 6 example electrodes 
+%% Get data for figure 2-6: average across subjects (Fig2) + example electrodes (Fig6).
+% Figure 2: gamma average across subjects 
+% Figure 6: gamma/OV model in 6 example electrodes 
 
 %%%%% Subjects/electrodes:
 subject_ind = [19 19 19 19 19 19  ... % S1
@@ -104,7 +104,7 @@ disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
 
 %%
 
-% Plot the mean gamma power across all electrodes (Figure 3b)
+% Plot the mean gamma power across all electrodes (Figure 2E)
 figure('Position',[0 0 600 600])
 subplot(8,5,2:5),hold on
 
@@ -136,12 +136,12 @@ set(gca,'XTick',[])
 xlim([0 87])
 ylabel(['average'])
 ylim([min(g_group_low)-10 max(g_group_up)+10])
-% save Figure 3b
+% save Figure 2E
 set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure3b_' modelType]))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure3b_' modelType]))
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2E_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2E_' modelType]))
 
 %%
 %%%%%% plot example electrodes and average across electrodes
@@ -177,7 +177,7 @@ for ll = 1:length(example_els)
     plot([1:86; 1:86],squeeze(ecog_g_err_all(example_els(ll),:,:)),'k');
     plot(OVestimate_all(example_els(ll),:)','r','LineWidth',2)
     
-    % plot baseline esimates:
+    % plot baseline estimates:
     plot([1 86],[ecog_g_base(example_els(ll)) ecog_g_base(example_els(ll))],'-','Color',[.5 .5 .5]);
     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
@@ -195,12 +195,12 @@ for ll = 1:length(example_els)
     ylabel(['el' int2str(elec) ' R^2=' int2str(OV_COD_all(example_els(ll),1))])
 end
 
-% save Figure 7
+% save Figure 6
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure7_' modelType]))
+        ['Figure6_' modelType]))
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure7_' modelType]))
+        ['Figure6_' modelType]))
 
 %%
 
@@ -242,6 +242,10 @@ for ll = 1:length(electrodes)
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
     ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
         squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
+    ecog_g_base = 100*(median(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1,2));
+    ecog_g_err_base = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
+        squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
+
     % Calculate ylims for gamma range:
     ylims = [min(ecog_g_err(:)) max([ecog_g_err(:)])];
     
@@ -259,6 +263,11 @@ for ll = 1:length(electrodes)
     xlim([0 87]), ylim(ylims(1,:))
     set(gca,'XTick',[])
     ylabel('gamma')
+    
+    % plot baseline estimates:
+    plot([1 86],[ecog_g_base ecog_g_base],'-','Color',[.5 .5 .5]);
+    plot([1 86],[ecog_g_err_base(1) ecog_g_err_base(1)],':','Color',[.5 .5 .5]);
+    plot([1 86],[ecog_g_err_base(2) ecog_g_err_base(2)],':','Color',[.5 .5 .5]);
     
     %%%%% Add model performance in label
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
@@ -360,3 +369,41 @@ for ll = 1:length(electrodes)
                 ['FigureS9a_elset' int2str(figure_nr) '_' modelType]))
     end
 end
+
+%%
+%% reviewer comment about visualizing errors:
+
+% all electrodes in 1
+figure('Position',[0 0 300 300]),hold on
+for ll = 1:length(electrodes)
+    plot([0:max(ecog_g_all(:))],[0:max(ecog_g_all(:))],'k','LineWidth',1)
+    plot(OVestimate_all',ecog_g_all','o')
+end
+xlabel('OV prediction')
+ylabel('gamma power')
+axis square
+axis tight 
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['FigureReview_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['FigureReview_' modelType]))
+        
+% all electrodes in 1
+figure('Position',[0 0 300 300]),hold on
+for ll = 1:length(electrodes)
+    plot([0:max(ecog_g_all(:))],[0:max(ecog_g_all(:))],'k','LineWidth',1)
+    plot(OVestimate_all',ecog_g_all','o')
+end
+xlabel('OV prediction')
+ylabel('gamma power')
+axis square
+xlim([0 500]),ylim([0 500])
+
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['FigureReview_' modelType '_zoom']))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['FigureReview_' modelType '_zoom']))
+
+
