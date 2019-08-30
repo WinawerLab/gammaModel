@@ -141,7 +141,7 @@ end
 %% phase locked power plot
 % https://groups.google.com/forum/#!topic/analyzingneuraltimeseriesdata/yqrV_rPu_OA
 % From Mike X Cohen
-% Separating the phase-locked from the non-phase-locked signal is another
+% "Separating the phase-locked from the non-phase-locked signal is another
 % area where the literature hasn't settled on a consistent solution.
 % Nonetheless, the approach I used in the book is the most common one. The
 % total signal is simply the time-frequency decomposition of each trial and
@@ -154,7 +154,7 @@ end
 % power, subtract the non-phase-locked from the total. This gives you the
 % phase-locked power. You might think that you should just take the
 % time-frequency decomposition of the ERP, but this generally produces
-% results that are very difficult to interpret.
+% results that are very difficult to interpret."
 
 
 %% load data and epoch

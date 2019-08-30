@@ -117,9 +117,9 @@ end
 
 disp(['mean OV model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
 
-%%
-%%
 
+
+%%
 ylims = [min(ecog_g_err(:)) max(ecog_g_err(:))];
 
 % Plot the mean broadband power across all electrodes (Figure 3a)
@@ -141,7 +141,7 @@ xlim([0 87])
 ylabel(['average'])
 ylim([min(g_group_low)-10 max(g_group_up)+10])
 
-% % save Figure 3a
+%% % save Figure 3a
 % set(gcf,'PaperPositionMode','auto')
 % print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
 %         ['Figure3a_' modelType]))

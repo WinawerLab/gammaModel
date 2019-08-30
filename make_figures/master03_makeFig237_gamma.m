@@ -56,6 +56,7 @@ ecog_g_all = zeros(length(electrodes),86);
 ecog_g_err_all = zeros(length(electrodes),2,86);
 ecog_g_base = zeros(length(electrodes),1);
 ecog_g_err_base = zeros(length(electrodes),2,1);
+zstat = zeros(length(electrodes),86);
 
 for ll = 1:length(electrodes)
     
@@ -95,6 +96,11 @@ for ll = 1:length(electrodes)
     ecog_g_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
         squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
 
+    % run bootstrap test:
+    ecog_g_100 = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1);
+    ecog_g_base_100 = 100*(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1);
+    zstat(ll,:) = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100);
+
     % model performance (no mean subtracted)
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
     OV_COD_all(ll) = r2;
@@ -102,9 +108,8 @@ end
 
 disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
 
-%%
+%% Plot the mean gamma power across all electrodes (Figure 2E)
 
-% Plot the mean gamma power across all electrodes (Figure 2E)
 figure('Position',[0 0 600 600])
 subplot(8,5,2:5),hold on
 
@@ -143,6 +148,27 @@ print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
         ['Figure2E_' modelType]))
 
+    %%
+%% Revision, figure scatter gammaVSovprediction
+figure('Position',[0 0 800 500])
+for ll = 1:size(ecog_g_all,1)
+    subplot(3,5,ll),hold on
+    plot(OVestimate_all(ll,:),ecog_g_all(ll,:),'k.')
+    plot([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])],...
+        [min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])],...
+        'k')
+    xlim([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])])
+    ylim([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])])
+    axis square
+end
+
+% save Figure 2 ReplyB
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2ReplyG_B_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2ReplyG_B_' modelType])) 
+
 %%
 %%%%%% plot example electrodes and average across electrodes
 % example electrodes
@@ -177,11 +203,16 @@ for ll = 1:length(example_els)
     plot([1:86; 1:86],squeeze(ecog_g_err_all(example_els(ll),:,:)),'k');
     plot(OVestimate_all(example_els(ll),:)','r','LineWidth',2)
     
-    % plot baseline estimates:
-    plot([1 86],[ecog_g_base(example_els(ll)) ecog_g_base(example_els(ll))],'-','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
+%     % plot baseline estimates:
+%     plot([1 86],[ecog_g_base(example_els(ll)) ecog_g_base(example_els(ll))],'-','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
     
+    % plot statistic > 2.5   
+    if ~isempty(find(abs(zstat(example_els(ll),:))>3))
+        plot(find(abs(zstat(example_els(ll),:))>2.5),0,'b.','MarkerSize',10)
+    end
+
     % set ylim
     ylims = [min(min(ecog_g_err_all(example_els(ll),:,:))) max(max(ecog_g_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))

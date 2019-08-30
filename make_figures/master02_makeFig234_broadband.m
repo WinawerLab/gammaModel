@@ -72,7 +72,7 @@ ecog_bb_all = zeros(length(electrodes),86);
 ecog_bb_err_all = zeros(length(electrodes),2,86);
 ecog_bb_base = zeros(length(electrodes),1);
 ecog_bb_err_base = zeros(length(electrodes),2,1);
-
+zstat = zeros(length(electrodes),86);
 
 % Get average broadband across all electrodes/subjects:
 for ll = 1:length(electrodes)
@@ -112,7 +112,12 @@ for ll = 1:length(electrodes)
     ecog_bb_base(ll) = mean(100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1),2);
     ecog_bb_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,2),.16,2)) ...
         squeeze(quantile(resamp_parms_baseline(:,:,2),.84,2))]'-bb_base)-1);   
-
+    
+    % run bootstrap test:
+    ecog_bb_100 = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
+    ecog_bb_base_100 = 100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1);
+    zstat(ll,:) = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100);
+    
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
     cross_SOCparams(cross_SOCparams(:,6)>1,6) = 1; % restrictrange at 1
@@ -131,7 +136,7 @@ end
 disp(['mean OV model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
 
 %%
-%% Figure 2E broadband 
+%% Figure 2E mean broadband across electrodes
 
 ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
 
@@ -162,6 +167,27 @@ print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
         ['Figure2E_' modelType]))     
 
+%% Revision, figure scatter broadbandVSsocprediction
+figure('Position',[0 0 800 500])
+for ll = 1:size(ecog_bb_all,1)
+    subplot(3,5,ll),hold on
+    plot(SOCestimate_all(ll,:),ecog_bb_all(ll,:),'k.')
+    plot([min([SOCestimate_all(ll,:) ecog_bb_all(ll,:)]) max([SOCestimate_all(ll,:) ecog_bb_all(ll,:)])],...
+        [min([SOCestimate_all(ll,:) ecog_bb_all(ll,:)]) max([SOCestimate_all(ll,:) ecog_bb_all(ll,:)])],...
+        'k')
+    xlim([min([SOCestimate_all(ll,:) ecog_bb_all(ll,:)]) max([SOCestimate_all(ll,:) ecog_bb_all(ll,:)])])
+    ylim([min([SOCestimate_all(ll,:) ecog_bb_all(ll,:)]) max([SOCestimate_all(ll,:) ecog_bb_all(ll,:)])])
+    axis square
+end
+
+% save Figure 2 ReplyA
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2ReplyBB_A_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure2ReplyBB_A_' modelType])) 
+ 
+    
 %% Plot example electrodes (Figure 3)
 example_els = [3 5 7 8 9 14];
 
@@ -175,11 +201,14 @@ for ll = 1:length(example_els)
     plot([1:86; 1:86],squeeze(ecog_bb_err_all(example_els(ll),:,:)),'k');
     plot(SOCestimate_all(example_els(ll),:)','r','LineWidth',2)
         
-    % plot baseline esimates:
-    plot([1 86],[ecog_bb_base(example_els(ll)) ecog_bb_base(example_els(ll))],'-','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_bb_err_base(example_els(ll),1) ecog_bb_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_bb_err_base(example_els(ll),2) ecog_bb_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
-    
+%     % plot baseline esimates:
+%     plot([1 86],[ecog_bb_base(example_els(ll)) ecog_bb_base(example_els(ll))],'-','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_bb_err_base(example_els(ll),1) ecog_bb_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_bb_err_base(example_els(ll),2) ecog_bb_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
+
+    % plot statistic > 2.5   
+    plot(find(abs(zstat(example_els(ll),:))>2.5),0,'b.','MarkerSize',10)
+
     % set ylim
     ylims = [min(min(ecog_bb_err_all(example_els(ll),:,:))) max(max(ecog_bb_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
