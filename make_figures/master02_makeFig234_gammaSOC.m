@@ -68,8 +68,8 @@ electrodes = [107 108 109 115 120 121 ... % S1
 socParams_all = zeros(length(electrodes),6);
 socCOD_all = zeros(length(electrodes),2);
 SOCestimate_all = zeros(length(electrodes),86);
-ecog_bb_all = zeros(length(electrodes),86);
-ecog_bb_err_all = zeros(length(electrodes),2,86);
+ecog_g_all = zeros(length(electrodes),86);
+ecog_g_err_all = zeros(length(electrodes),2,86);
 
 % Get average broadband across all electrodes/subjects:
 for ll = 1:length(electrodes)
@@ -115,40 +115,11 @@ for ll = 1:length(electrodes)
     SOCestimate_all(ll,:) = cross_SOCestimate;
 end
 
-disp(['mean OV model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
+disp(['mean SOC model performance: COD = ' int2str(mean(socCOD_all(:,2)))])
 
 
 
-%%
-ylims = [min(ecog_g_err(:)) max(ecog_g_err(:))];
-
-% Plot the mean broadband power across all electrodes (Figure 3a)
-figure('Position',[0 0 470 600])
-subplot(8,1,1),hold on
-bar(mean(ecog_g_all,1),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0],'LineWidth',1);
-g_group_err = std(ecog_g_all,1)./sqrt(size(ecog_g_all,1));
-g_group_up = mean(ecog_g_all,1)+g_group_err;
-g_group_low = mean(ecog_g_all,1)-g_group_err;
-plot([1:86; 1:86],[g_group_up; g_group_low],'k');
-% plot(mean(SOCestimate_all,1)','r','LineWidth',2)
-% plot stimulus cutoffs
-stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
-for k = 1:length(stim_change)
-    plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
-end
-set(gca,'XTick',[])
-xlim([0 87])
-ylabel(['average'])
-ylim([min(g_group_low)-10 max(g_group_up)+10])
-
-%% % save Figure 3a
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure3a_' modelType]))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure3a_' modelType]))     
-
-% Plot example electrodes (Figure 4)
+%% Plot example electrodes (Figure 4)
 example_els = [3 5 7 8 9 14];
 
 figure('Position',[0 0 470 600])
@@ -257,11 +228,11 @@ for ll = 1:length(electrodes)
 
     if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
         % save the figure
-%         set(gcf,'PaperPositionMode','auto')
-%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
-%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
 
         % and make a new figure
         figure_nr = figure_nr +1;
@@ -271,11 +242,11 @@ for ll = 1:length(electrodes)
         
     elseif ll==length(electrodes)% save figure after last electrode
         % save the last figure
-%         set(gcf,'PaperPositionMode','auto')
-%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
-%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
     end
 end
 

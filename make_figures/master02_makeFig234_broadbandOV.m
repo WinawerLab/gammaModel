@@ -9,6 +9,7 @@
 % Cascade Model of BOLD Responses in Human Visual Cortex. PLoS Comput Biol
 % 9(5): e1003079. https://doi.org/10.1371/journal.pcbi.1003079
 %
+%
 % Dora Hermes, 2017
 
 clear all
@@ -51,10 +52,10 @@ electrodes = [107 108 109 115 120 121 ... % S1
 OV_COD_all = zeros(length(electrodes),1);
 OVparams_all = zeros(length(electrodes),5);
 OVestimate_all = zeros(length(electrodes),86);
-ecog_g_all = zeros(length(electrodes),86);
-ecog_g_err_all = zeros(length(electrodes),2,86);
-ecog_g_base = zeros(length(electrodes),1);
-ecog_g_err_base = zeros(length(electrodes),2,1);
+ecog_bb_all = zeros(length(electrodes),86);
+ecog_bb_err_all = zeros(length(electrodes),2,86);
+ecog_bb_base = zeros(length(electrodes),1);
+ecog_bb_err_base = zeros(length(electrodes),2,1);
 zstat = zeros(length(electrodes),86);
 
 for ll = 1:length(electrodes)
@@ -68,7 +69,7 @@ for ll = 1:length(electrodes)
     res = sqrt(size(stimulus,2)/8);
 
     % Load model fit:
-    load(fullfile(dataDir,'derivatives','gaborFilt','OV_gamma',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','OV_broadband',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
             'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
     % Median model parameters across leav-one-out (actually, only the gain)
@@ -84,89 +85,22 @@ for ll = 1:length(electrodes)
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
     load(dataBaseFitName)
 
-    % Gamma power percent signal change:
-    ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
-    ecog_g_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.16,2)) ...
-        squeeze(quantile(resamp_parms(:,:,3)./resamp_parms(:,:,5),.84,2))]')-1);
-    ecog_g_all(ll,:) = ecog_g;
-    ecog_g_err_all(ll,:,:) = ecog_g_err;
-    
-    ecog_g_base(ll) = 100*(mean(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1,2));
-    ecog_g_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
-        squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
-
-    % run bootstrap test:
-    ecog_g_100 = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1);
-    ecog_g_base_100 = 100*(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1);
-    zstat(ll,:) = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100);
+    % get ecog power percent signal change
+    bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
+    ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
+    ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
+        squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);   
+    ecog_bb_all(ll,:) = ecog_bb;
+    ecog_bb_err_all(ll,:,:) = ecog_bb_err;
 
     % model performance (no mean subtracted)
-    r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
+    r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_bb,[],0,0);
     OV_COD_all(ll) = r2;
 end 
 
 disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
 
-%% Plot the mean gamma power across all electrodes (Figure 2E)
 
-figure('Position',[0 0 600 600])
-subplot(8,5,2:5),hold on
-
-% plot stimulus data and error:
-bar(mean(ecog_g_all,1),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0],'LineWidth',1);
-g_group_err = std(ecog_g_all,1)./sqrt(size(ecog_g_all,1));
-g_group_up = mean(ecog_g_all,1)+g_group_err;
-g_group_low = mean(ecog_g_all,1)-g_group_err;
-plot([1:86; 1:86],[g_group_up; g_group_low],'k');
-
-% plot baseline gamma and sterr
-g_base_mean = mean(ecog_g_base,1);
-g_base_err = std(ecog_g_base,1)./sqrt(size(ecog_g_base,1));
-g_base_up = mean(ecog_g_base,1)+g_base_err;
-g_base_low = mean(ecog_g_base,1)-g_base_err;
-plot([1 86],[g_base_mean; g_base_mean],'-','Color',[.5 .5 .5]);
-plot([1 86],[g_base_up; g_base_up],':','Color',[.5 .5 .5]);
-plot([1 86],[g_base_low; g_base_low],':','Color',[.5 .5 .5]);
-
-ylims = [min(g_group_low(:)) max(g_group_up(:))];
-
-% plot stimulus cutoffs
-stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
-for k = 1:length(stim_change)
-    plot([stim_change(k) stim_change(k)],ylims(1,:),'Color',[.5 .5 .5],'LineWidth',2)
-end
-
-set(gca,'XTick',[])
-xlim([0 87])
-ylabel(['average'])
-ylim([min(g_group_low)-10 max(g_group_up)+10])
-% save Figure 2E
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure2E_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure2E_' modelType]))
-
-    %%
-%% Revision, figure scatter gammaVSovprediction
-figure('Position',[0 0 800 500])
-for ll = 1:size(ecog_g_all,1)
-    subplot(3,5,ll),hold on
-    plot(OVestimate_all(ll,:),ecog_g_all(ll,:),'k.')
-    plot([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])],...
-        [min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])],...
-        'k')
-    xlim([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])])
-    ylim([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])])
-    axis square
-end
-% 
-% % save Figure 2 ReplyB
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure2ReplyG_B_' modelType]))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure2ReplyG_B_' modelType])) 
 
 %%
 %%%%%% plot example electrodes and average across electrodes
@@ -196,24 +130,19 @@ for ll = 1:length(example_els)
     axis off
     
     
-    %%% PLOT GAMMA POWER AND OV FIT
+    %%% PLOT BROADBAND POWER AND OV FIT
     subplot(8,5,5*ll-3:5*ll),hold on
-    bar(ecog_g_all(example_els(ll),:),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
-    plot([1:86; 1:86],squeeze(ecog_g_err_all(example_els(ll),:,:)),'k');
+    bar(ecog_bb_all(example_els(ll),:),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
+    plot([1:86; 1:86],squeeze(ecog_bb_err_all(example_els(ll),:,:)),'k');
     plot(OVestimate_all(example_els(ll),:)','r','LineWidth',2)
-    
-%     % plot baseline estimates:
-%     plot([1 86],[ecog_g_base(example_els(ll)) ecog_g_base(example_els(ll))],'-','Color',[.5 .5 .5]);
-%     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
-%     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
-    
+        
     % plot statistic > 2.5   
     if ~isempty(find(abs(zstat(example_els(ll),:))>3))
         plot(find(abs(zstat(example_els(ll),:))>2.5),0,'b.','MarkerSize',10)
     end
 
     % set ylim
-    ylims = [min(min(ecog_g_err_all(example_els(ll),:,:))) max(max(ecog_g_err_all(example_els(ll),:,:)))];
+    ylims = [min(min(ecog_bb_err_all(example_els(ll),:,:))) max(max(ecog_bb_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
     % plot stimulus cutoffs
     stim_change=[38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];
@@ -228,9 +157,9 @@ end
 % % save Figure 6
 % set(gcf,'PaperPositionMode','auto')
 % print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure6_' modelType]))
+%         ['Figure6_bb' modelType]))
 % print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure6_' modelType]))
+%         ['Figure6_bb' modelType]))
 
 %%
 
@@ -321,119 +250,13 @@ for ll = 1:length(electrodes)
         % Save Figure S9
         set(gcf,'PaperPositionMode','auto')
         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS9_elset' int2str(figure_nr) '_' modelType]))
+                ['FigureS9_elset' int2str(figure_nr) '_bb' modelType]))
         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS9_elset' int2str(figure_nr) '_' modelType]))
+                ['FigureS9_elset' int2str(figure_nr) '_bb' modelType]))
     end
     
 end
 
 %%
-
-%% Look at where the Gaussian is for all electrodes
-
-%%%%% Subjects/electrodes:
-subject_ind = [19 19 19 19 19 19  ... % S1
-    24 24 ... % S2
-    1001 1001 1001 1001 1001 1001 1001 1001]; % S3
-electrodes = [107 108 109 115 120 121 ... % S1
-    45 46 ... % S2
-    49 50 52 57 58 59 60]; % S3
-
-plot_nr = 0; 
-figure_nr = 1;
-figure('Position',[0 0 200 600])    
-for ll = 1:length(electrodes)
-    plot_nr = plot_nr + 1;
-    
-    subj = subject_ind(ll);
-    elec = electrodes(ll);
-
-    analysisType = 'spectra200';
-    modelType = 'OVmodel';
-    res = sqrt(size(stimulus,2)/8);
-
-     %%%%% Load model fit:
-    load(fullfile(dataDir,'derivatives','gaborFilt','OV_gamma',...
-            ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
-            'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
-
-    %%% LOOK AT WHERE THE GAUSSIAN IS
-    subplot(8,1,plot_nr) % NO HOLD ON HERE, only after imagesc, otherwise Y axis inverted
-    [~,xx,yy] = makegaussian2d(res,2,2,2,2);
-    imagesc(ones(size(xx)),[0 1]);
-    axis image, hold on, colormap gray
-    plot([res/2 res/2],[1 res],'k'),plot([1 res],[res/2 res/2],'k')
-
-    %%% Where is the seed prf:
-    numPoints = 50;
-    c.th = linspace(0,2*pi, numPoints);
-    % plot 1 sd
-    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*seed_params(3));
-    plot(c.x + seed_params(2), c.y + seed_params(1), 'r') % this is just reversed because plot and imagesc are opposite, checked this with contour
-    % plot 2 sd
-    [c.x, c.y] = pol2cart(c.th, ones(1,numPoints)*2*seed_params(3));
-    plot(c.x + seed_params(2), c.y + seed_params(1), 'r:') % this is just reversed because plot and imagesc are opposite, checked this with contour
-    axis off
-    
-    if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
-        % Save Figure S8a
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS8a_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS8a_elset' int2str(figure_nr) '_' modelType]))
-
-        % and make a new figure
-        figure_nr = figure_nr +1;
-        figure('Position',[0 0 200 600])
-        % reset the subplot number
-        plot_nr = 0;
-%         
-    elseif ll==length(electrodes)% save figure after last electrode
-        % Save Figure S9a
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS9a_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS9a_elset' int2str(figure_nr) '_' modelType]))
-    end
-end
-
-%%
-%% reviewer comment about visualizing errors:
-
-% all electrodes in 1
-figure('Position',[0 0 300 300]),hold on
-for ll = 1:length(electrodes)
-    plot([0:max(ecog_g_all(:))],[0:max(ecog_g_all(:))],'k','LineWidth',1)
-    plot(OVestimate_all',ecog_g_all','o')
-end
-xlabel('OV prediction')
-ylabel('gamma power')
-axis square
-axis tight 
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['FigureReview_' modelType]))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['FigureReview_' modelType]))
-        
-% all electrodes in 1
-figure('Position',[0 0 300 300]),hold on
-for ll = 1:length(electrodes)
-    plot([0:max(ecog_g_all(:))],[0:max(ecog_g_all(:))],'k','LineWidth',1)
-    plot(OVestimate_all',ecog_g_all','o')
-end
-xlabel('OV prediction')
-ylabel('gamma power')
-axis square
-xlim([0 500]),ylim([0 500])
-
-set(gcf,'PaperPositionMode','auto')
-print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['FigureReview_' modelType '_zoom']))
-print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['FigureReview_' modelType '_zoom']))
 
 
