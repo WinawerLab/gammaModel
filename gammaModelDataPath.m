@@ -4,7 +4,9 @@ function rootPath = gammaModelDataPath()
 
 %  pth = gammaModelDataPath;
 
-rootPath = '/Volumes/DoraBigDrive/data/visual_soc/visualGammaModel_bids/';
+rootPath = fullfile(fileparts(which(mfilename)), 'data');
 fprintf('gamma model bids directory: %s\n',rootPath)
+
+% rootPath = '/Volumes/DoraBigDrive/data/visual_soc/visualGammaModel_bids/';
 
 return
