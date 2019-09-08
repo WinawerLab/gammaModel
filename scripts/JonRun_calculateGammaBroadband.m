@@ -22,11 +22,11 @@ electrodes_allsubjects  = [107 108 109 115 120 121 45 45   49   50   52   57   5
 analysisType = 'spectra200';
 
 
-%hpc_job_number = str2num(getenv('SLURM_ARRAY_TASK_ID'));
-hpc_job_number = 1;
+hpc_job_number = str2num(getenv('SLURM_ARRAY_TASK_ID'));
+
 
 % nr of bootstrap for resampling per stimulus
-nr_boots = 1000;
+nr_boots = 2;
 
 subj = num2str(subjects(hpc_job_number));
 elec = electrodes_allsubjects(hpc_job_number);
@@ -36,6 +36,9 @@ dataName = fullfile(dataDir,...
     ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '.mat']);
 load(dataName,'f','spectra','spectra_off','stims')
 
+
+[a,b] = fileparts(dataName);
+dataFitName = [a '/' b '_fitEl' int2str(elec)];
 
 % define output:
 resamp_parms = NaN(max(stims),nr_boots,7);
@@ -76,13 +79,10 @@ for k = 1:max(stims)
         % calculate alpha change
         resamp_parms(k,ii,7) = mean(log10(data_fit(f_alpha)) - log10(data_base(f_alpha)));
     end
+    
+    save(dataFitName,'resamp_parms')
+
 end
-
-[a,b] = fileparts(dataName);
-dataFitName = [a '/' b '_fitEl' int2str(elec)];
-clear a b
-
-save(dataFitName,'resamp_parms')
 
 
 clear resamp_parms spectra
@@ -106,6 +106,11 @@ analysisType = 'spectra200';
 dataName = fullfile(dataDir,...
     ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '.mat']);
 load(dataName,'f','spectra','spectra_off','stims','runs','exclude_channels','include_channels')
+
+[a,b] = fileparts(dataName);
+dataFitName = [a '/' b '_fitBaseEl' int2str(elec)];
+clear a b
+
 
 % define output:
 resamp_parms_baseline = NaN(1,nr_boots,7);
@@ -146,10 +151,6 @@ for ii = 1:nr_boots
     resamp_parms_baseline(1,ii,7) = mean(log10(data_fit(f_alpha)) - log10(data_base(f_alpha)));
     
 end
-
-[a,b] = fileparts(dataName);
-dataFitName = [a '/' b '_fitBaseEl' int2str(elec)];
-clear a b
 
 save(dataFitName,'resamp_parms_baseline')
 
