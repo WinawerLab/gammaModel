@@ -26,7 +26,7 @@ hpc_job_number = str2num(getenv('SLURM_ARRAY_TASK_ID'));
 
 
 % nr of bootstrap for resampling per stimulus
-nr_boots = 2;
+nr_boots = 1000;
 
 subj = num2str(subjects(hpc_job_number));
 elec = electrodes_allsubjects(hpc_job_number);
