@@ -17,7 +17,7 @@ dataDir = gammaModelDataPath;
 %    [49 50 52 57 58 59 60]}; % S3
 
 subjects                = [ 19  19  19  19  19  19 24 24 1001 1001 1001 1001 1001 1001 1001];
-electrodes_allsubjects  = [107 108 109 115 120 121 45 45   49   50   52   57   58   59   60];
+electrodes_allsubjects  = [107 108 109 115 120 121 45 46   49   50   52   57   58   59   60];
 
 analysisType = 'spectra200';
 
