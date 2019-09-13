@@ -47,6 +47,12 @@ OVbbestimate_all = zeros(length(electrodes),86);
 OVg_COD_all = zeros(length(electrodes),1);
 OVgestimate_all = zeros(length(electrodes),86);
 
+MEANbb_COD_all = zeros(length(electrodes),1);
+MEANbbestimate_all = zeros(length(electrodes),86);
+
+MEANg_COD_all = zeros(length(electrodes),1);
+MEANgestimate_all = zeros(length(electrodes),86);
+
 ecog_bb_all = zeros(length(electrodes),86);
 ecog_bb_err_all = zeros(length(electrodes),2,86);
 ecog_g_all = zeros(length(electrodes),86);
@@ -90,15 +96,30 @@ for ll = 1:length(electrodes)
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
             'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance');
 
+    % 5) get MEAN broadband model fits
+    analysisType = 'spectra200';
+    modelType = 'MeanBB';
+    MEANbb = load(fullfile(dataDir,'derivatives','gaborFilt','mean_broadband',...
+            ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
+            'cross_MeanPred');
+
+    % 6) get MEAN gamma model fits
+    analysisType = 'spectra200';
+    modelType = 'MeanGamma';
+    MEANgamma = load(fullfile(dataDir,'derivatives','gaborFilt','mean_gamma',...
+            ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
+            'cross_MeanPred');
+                
     % save model estimate outputs:
     SOCbbestimate_all(ll,:) = SOCbb.cross_SOCestimate;
     SOCgestimate_all(ll,:) = SOCgamma.cross_SOCestimate;
     OVbbestimate_all(ll,:) = OVbb.cross_OVestimate(:,:,OVbb.ov_exponents==.5);
     OVgestimate_all(ll,:) = OVgamma.cross_OVestimate(:,:,OVgamma.ov_exponents==.5);
+    MEANbbestimate_all(ll,:) = MEANbb.cross_MeanPred;
+    MEANgestimate_all(ll,:) = MEANgamma.cross_MeanPred;
     
-    
-    % Load ecog data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    % load ecog stimulus data (1000 bootstraps):
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
@@ -117,13 +138,15 @@ for ll = 1:length(electrodes)
     ecog_g_all(ll,:) = ecog_g;
     ecog_g_err_all(ll,:,:) = ecog_g_err;
 
-        
     % save model fit outputs, no means subtracted:
     SOCbb_COD_all(ll) = calccod(SOCbb.cross_SOCestimate,ecog_bb,[],0,0); % predict mean + variance
     SOCg_COD_all(ll) = calccod(SOCgamma.cross_SOCestimate,ecog_g,[],0,0); % predict mean + variance
 
-    OVbb_COD_all(ll) = calccod(squeeze(OVbb.cross_OVestimate(:,:,OVbb.ov_exponents==.5)),ecog_bb,[],0,0);
-    OVg_COD_all(ll) = calccod(squeeze(OVgamma.cross_OVestimate(:,:,OVgamma.ov_exponents==.5)),ecog_g,[],0,0);
+    OVbb_COD_all(ll) = calccod(OVbb.cross_OVestimate(:,:,OVbb.ov_exponents==.5),ecog_bb,[],0,0);
+    OVg_COD_all(ll) = calccod(OVgamma.cross_OVestimate(:,:,OVgamma.ov_exponents==.5),ecog_g,[],0,0);
+
+    MEANbb_COD_all(ll) = calccod(MEANbb.cross_MeanPred,ecog_bb,[],0,0);
+    MEANg_COD_all(ll) = calccod(MEANgamma.cross_MeanPred,ecog_g,[],0,0);
 
     % save Spearman model fit outputs
     SOCbb_Spearman_all(ll) = corr(SOCbb.cross_SOCestimate,ecog_bb,'Type','Spearman'); 
@@ -132,13 +155,22 @@ for ll = 1:length(electrodes)
     OVbb_Spearman_all(ll) = corr(squeeze(OVbb.cross_OVestimate(:,:,OVbb.ov_exponents==.5)),ecog_bb,'Type','Spearman'); 
     OVg_Spearman_all(ll) = corr(squeeze(OVgamma.cross_OVestimate(:,:,OVgamma.ov_exponents==.5)),ecog_g,'Type','Spearman'); 
 
-%     % save Spearman model fit outputs
-%     SOCbb_Spearman_all(ll) = corr(SOCbb.cross_SOCestimate,ecog_bb,'Type','Pearson'); 
-%     SOCg_Spearman_all(ll) = corr(SOCgamma.cross_SOCestimate,ecog_g,'Type','Pearson'); 
-% 
-%     OVbb_Spearman_all(ll) = corr(squeeze(OVbb.cross_OVestimate(:,:,OVbb.ov_exponents==.5)),ecog_bb,'Type','Pearson'); 
-%     OVg_Spearman_all(ll) = corr(squeeze(OVgamma.cross_OVestimate(:,:,OVgamma.ov_exponents==.5)),ecog_g,'Type','Pearson'); 
 end 
+
+mean([SOCbb_COD_all SOCg_COD_all OVbb_COD_all OVg_COD_all MEANbb_COD_all MEANg_COD_all])
+
+% test whether SOC is better for broadband than OV:
+[~,p,hi,stats] = ttest(fisherz(SOCbb_COD_all./100),fisherz(OVbb_COD_all./100));
+
+% test whether SOC is better for broadband than mean:
+[~,p,hi,stats] = ttest(fisherz(SOCbb_COD_all./100),fisherz(MEANbb_COD_all./100));
+
+
+% test whether OV is better for gamma than SOC:
+[~,p,hi,stats] = ttest(fisherz(SOCg_COD_all./100),fisherz(OVg_COD_all./100));
+
+% test whether OV is better for gamma than mean:
+[~,p,hi,stats] = ttest(fisherz(SOCg_COD_all./100),fisherz(MEANg_COD_all./100));
 
 
 %% plot OV vs SOC models
@@ -186,6 +218,23 @@ figure('Position',[0 0 300 150]),hold on
 
 plot(OVbb_Spearman_all.^2,SOCbb_Spearman_all.^2,'b.','MarkerSize',10)
 plot(OVg_Spearman_all.^2,SOCg_Spearman_all.^2,'r.','MarkerSize',10)
+
+% plot error bars across the datapoints
+nn = length(SOCbb_Spearman_all);
+group_means = mean([SOCbb_Spearman_all,SOCg_Spearman_all,OVbb_Spearman_all,OVg_Spearman_all]);
+group_low = mean([SOCbb_Spearman_all,SOCg_Spearman_all,OVbb_Spearman_all,OVg_Spearman_all]) - ...
+    2*std([SOCbb_Spearman_all,SOCg_Spearman_all,OVbb_Spearman_all,OVg_Spearman_all])./sqrt(nn);
+group_up = mean([SOCbb_Spearman_all,SOCg_Spearman_all,OVbb_Spearman_all,OVg_Spearman_all]) + ...
+    2*std([SOCbb_Spearman_all,SOCg_Spearman_all,OVbb_Spearman_all,OVg_Spearman_all])./sqrt(nn);
+
+plot([group_means(3) group_means(3)],[group_means(1) group_means(1)],'.','MarkerSize',20,'Color',[0 0 .8])
+plot([group_means(3) group_means(3)],[group_low(1) group_up(1)],'Color',[0 0 .8],'Linewidth',2)
+plot([group_low(3) group_up(3)],[group_means(1) group_means(1)],'Color',[0 0 .8],'Linewidth',2)
+
+plot([group_means(4) group_means(4)],[group_means(2) group_means(2)],'.','MarkerSize',20,'Color',[.8 0 0])
+plot([group_means(4) group_means(4)],[group_low(2) group_up(2)],'Color',[.8 0 0],'Linewidth',2)
+plot([group_low(4) group_up(4)],[group_means(2) group_means(2)],'Color',[.8 0 0],'Linewidth',2)
+
 xlim([0 1]),ylim([0 1])
 plot([0 1],[0 1],'k')
 legend('broadband','gamma','Location','eastoutside')
@@ -193,13 +242,13 @@ xlabel('Spearman OV model')
 ylabel('Spearman SOC model')
 set(gca,'XTick',[0:.2:1],'YTick',[0:.2:1])
 axis square
-% 
-% % Save Dispersion Figure
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Dispersion_Spearman']))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Dispersion_Spearman']))
+ 
+% Save Dispersion Figure
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Dispersion_Spearman']))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Dispersion_Spearman']))
 
 %% plot Scatter prediction & data
 
@@ -223,3 +272,62 @@ legend({'1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'},'Loca
 %         ['Dispersion_Spearman']))
 % print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
 %         ['Dispersion_Spearman']))
+
+
+%% plot histogram of errors, prediction - data
+
+figure('Position',[0 0 750 400])
+
+subplot(2,2,1)
+for kk = 1:15
+    histogram(SOCbbestimate_all(kk,:)-ecog_bb_all(kk,:),[-1000:20:1000])
+    hold on
+end
+subplot(2,2,3)
+histogram(OVbbestimate_all(:)-ecog_bb_all(:),[-1000:20:1000])
+
+
+subplot(2,2,2)
+histogram(SOCgestimate_all(:)-ecog_g_all(:),[-1000:20:1000])
+subplot(2,2,4)
+histogram(OVgestimate_all(:)-ecog_g_all(:),[-1000:20:1000])
+
+%%
+
+figure('Position',[0 0 750 400])
+
+subplot(2,2,1)
+[n,x] = hist(SOCbbestimate_all'-ecog_bb_all',[-500:10:500]);
+bar(x,n,10)
+title('SOC model error (estimate - broadband)')
+xlabel('error')
+ylabel('# stimuli')
+
+subplot(2,2,3)
+[n,x] = hist(OVbbestimate_all'-ecog_bb_all',[-500:10:500]);
+bar(x,n,10)
+title('OV model error (estimate - broadband)')
+xlabel('error')
+ylabel('# stimuli')
+
+subplot(2,2,2)
+[n,x] = hist(SOCgestimate_all'-ecog_g_all',[-500:10:500]);
+bar(x,n,10)
+title('SOC model error (estimate - gamma)')
+xlabel('error')
+ylabel('# stimuli')
+
+subplot(2,2,4)
+[n,x] = hist(OVgestimate_all'-ecog_g_all',[-500:10:500]);
+bar(x,n,10)
+title('OV model error (estimate - gamma)')
+xlabel('error')
+ylabel('# stimuli')
+
+
+% Save Dispersion Figure
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['error_histograms']))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['error_histograms']))

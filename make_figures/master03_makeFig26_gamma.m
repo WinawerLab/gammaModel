@@ -56,6 +56,7 @@ ecog_g_err_all = zeros(length(electrodes),2,86);
 ecog_g_base = zeros(length(electrodes),1);
 ecog_g_err_base = zeros(length(electrodes),2,1);
 zstat = zeros(length(electrodes),86);
+ci_base = zeros(length(electrodes),1);
 
 for ll = 1:length(electrodes)
     
@@ -76,11 +77,11 @@ for ll = 1:length(electrodes)
     OVestimate_all(ll,:) = cross_OVestimate(:,:,ov_exponents==.5);
     
     % Load ecog stimulus data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
     % Load ecog baseline data:
-    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
     load(dataBaseFitName)
 
@@ -98,8 +99,10 @@ for ll = 1:length(electrodes)
     % run bootstrap test:
     ecog_g_100 = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1);
     ecog_g_base_100 = 100*(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1);
-    zstat(ll,:) = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100);
-
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100,'bootstat');
+    zstat(ll,:) = zz; clear zz
+    ci_base(ll) = upbase_ci; clear upbase_ci
+    
     % model performance (no mean subtracted)
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
     OV_COD_all(ll) = r2;
@@ -147,7 +150,7 @@ print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
         ['Figure2E_' modelType]))
 
-    %%
+%%
 %% Revision, figure scatter gammaVSovprediction
 figure('Position',[0 0 800 500])
 for ll = 1:size(ecog_g_all,1)
@@ -160,7 +163,7 @@ for ll = 1:size(ecog_g_all,1)
     ylim([min([OVestimate_all(ll,:) ecog_g_all(ll,:)]) max([OVestimate_all(ll,:) ecog_g_all(ll,:)])])
     axis square
 end
-% 
+ 
 % % save Figure 2 ReplyB
 % set(gcf,'PaperPositionMode','auto')
 % print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
@@ -207,9 +210,9 @@ for ll = 1:length(example_els)
 %     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
     
-    % plot statistic > 2.5   
-    if ~isempty(find(abs(zstat(example_els(ll),:))>3))
-        plot(find(abs(zstat(example_els(ll),:))>2.5),0,'b.','MarkerSize',10)
+    % plot bootstrap 68% non-overlapping
+    if ~isempty(find(zstat(example_els(ll),:)>0,1))
+        plot(find(zstat(example_els(ll),:)>0),0,'b.','MarkerSize',10)
     end
 
     % set ylim
@@ -225,15 +228,14 @@ for ll = 1:length(example_els)
     ylabel(['el' int2str(elec) ' R^2=' int2str(OV_COD_all(example_els(ll),1))])
 end
 
-% % save Figure 6
-% set(gcf,'PaperPositionMode','auto')
-% print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure6_' modelType]))
-% print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%         ['Figure6_' modelType]))
+% save Figure 6
+set(gcf,'PaperPositionMode','auto')
+print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure6_' modelType]))
+print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+        ['Figure6_' modelType]))
 
 %%
-
 %% Figures S8-9 OV model results for all electrodes, all subjects
 
 %%%%% Subjects/electrodes:
@@ -264,7 +266,7 @@ for ll = 1:length(electrodes)
             'seed_params','cross_OVparams','cross_OVestimate','ov_exponents','train_OVperformance')
 
     %%%%% Load ecog data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
@@ -294,10 +296,15 @@ for ll = 1:length(electrodes)
     set(gca,'XTick',[])
     ylabel('gamma')
     
-    % plot baseline estimates:
-    plot([1 86],[ecog_g_base ecog_g_base],'-','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_g_err_base(1) ecog_g_err_base(1)],':','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_g_err_base(2) ecog_g_err_base(2)],':','Color',[.5 .5 .5]);
+%     % plot baseline estimates:
+%     plot([1 86],[ecog_g_base ecog_g_base],'-','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_g_err_base(1) ecog_g_err_base(1)],':','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_g_err_base(2) ecog_g_err_base(2)],':','Color',[.5 .5 .5]);
+    
+    % plot bootstrap 68% non-overlapping
+    if ~isempty(find(zstat(ll,:)>0,1))
+        plot(find(zstat(ll,:)>0),0,'b.','MarkerSize',10)
+    end
     
     %%%%% Add model performance in label
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);

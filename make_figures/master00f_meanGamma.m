@@ -13,87 +13,64 @@ dataDir = gammaModelDataPath;
 addpath('/Users/dora/Documents/git/ecogBasicCode/')
 addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
 
-%% Load preprocessed images
-
-load(fullfile(dataDir,'derivatives','gaborFilt','task-soc_stimuli_gaborFilt01.mat'),'stimulus')
-
-% compute the square root of the sum of the squares of the outputs of
-% quadrature-phase filter pairs (this is the standard complex-cell energy model).
-% after this step, stimulus is images x orientations*positions.
-stimulus = sqrt(blob(stimulus.^2,2,2));
-% the square root may not be typical for complex cell energy model
-
 
 %% Load ECoG data and fit
 
-%%%%% Subjects/electrodes:
-subject_ind = [19 19 19 19 19 19  ... % S1
-    24 24 ... % S2
-    1001 1001 1001 1001 1001 1001 1001 1001]; % S3
-electrodes = [107 108 109 115 120 121 ... % S1
-    45 46 ... % S2
-    49 50 52 57 58 59 60]; % S3
+%%%%% Pick a subject:
+subjects = {'19','24','1001'};
 
+for s = 1:length(subjects) 
+    subj = subjects{s};
 
-nrOrientations = 8;
-
-if subj == 9
-    im_deg = rad2deg(atan(20.7./61));
-elseif subj == 19
-    im_deg = rad2deg(atan(17.9./50));
-    electrodes = [107 108 109 115 120 121]; % S1
-elseif subj==23
-    im_deg = rad2deg(atan(17.9./36));
-    % electrodes = [53 54]; % S2
-elseif subj==24
-    im_deg = rad2deg(atan(17.9./45));
-    electrodes = [45 46]; % S3
-elseif subj==1001
-    im_deg = rad2deg(atan(17.9./50));
-    electrodes = [37 43 44 45 49 50 51 52 57 58 59 60]; % S1001
-end
-% electrodes = [109];
-
-res = sqrt(size(stimulus,2)/nrOrientations);  % resolution of the pre-processed stimuli
-
-for el = 1:length(electrodes)
-    elec = electrodes(el);
-
-    % Choose an analysis type:
-    analysisType = 'spectra200';
-    
-    % Load ECoG data:
-    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
-        'ses-01','derivatives','ieeg',...
-        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
-    load(dataFitName)
-    
-    % Gamma power percent signal change per stimulus:
-    ecog_g = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1); % Actual gamma amplitude is parm3/5 width./amplitude
-    
-    
-    %% Fit mean model
-
-    % Initalize outputs:
-    cross_MeanPred = zeros(size(ecog_g,1),1);
-        
-    % Estimate gain, leave one out every time for cross validation
-    for kk = 1:size(ecog_g,1) % number of stimuli, leave out kk   
-        % training stimuli (kk is left out)
-        trainSet = setdiff([1:size(ecog_g,1)],kk);
-        
-        % get the mean of training stimuli
-        kkEstimate = mean(mean(ecog_g(trainSet,:),2),1);
-                
-        % this is the estimate for the leftout stimulus
-        cross_MeanPred(kk,1) = kkEstimate;
+    if isequal(subj,'19') % S1
+        im_deg = rad2deg(atan(17.9./50));
+        electrodes = [107 108 109 115 120 121]; 
+    elseif isequal(subj,'24') % S2
+        im_deg = rad2deg(atan(17.9./45));
+        electrodes = [45 46];
+    elseif isequal(subj,'1001') % S3
+        im_deg = rad2deg(atan(20./60));
+        electrodes = [49 50 52 57 58 59 60]; 
     end
 
-    save(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
-        ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_MeanPred']),...
-        'cross_MeanPred')    
-end
+    for el = 1:length(electrodes)
+        elec = electrodes(el);
 
+        % Choose an analysis type:
+        analysisType = 'spectra200';
+
+        % Load ecog stimulus data:
+        dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+            ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+        load(dataFitName)
+
+        % Gamma power percent signal change:
+        ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
+    
+        %% Fit mean model
+
+        % Initalize outputs:
+        cross_MeanPred = zeros(size(ecog_g,1),1);
+        
+            % Estimate gain, leave one out every time for cross validation
+            for kk = 1:size(ecog_g,1) % number of stimuli, leave out kk   
+                % training stimuli (kk is left out)
+                trainSet = setdiff([1:size(ecog_g,1)],kk);
+
+                % get the mean of training stimuli
+                kkEstimate = mean(mean(ecog_g(trainSet,:),2),1);
+
+                % this is the estimate for the leftout stimulus
+                cross_MeanPred(kk,1) = kkEstimate;
+            end
+
+        save(fullfile(dataDir,'derivatives','gaborFilt','mean_gamma',...
+            ['sub' subj '_el' int2str(elec) '_' analysisType '_MeanGamma']),...
+            'cross_MeanPred')    
+        
+        disp(['Done fitting mean model for subj ' subj ' el ' int2str(elec)])
+    end
+end
 
 %% Display model results for all electrodes
 
@@ -113,19 +90,18 @@ for ll = 1:length(electrodes)
     elec = electrodes(ll);
 
     analysisType = 'spectra200';
-    modelType = 'MeanPred';
+    modelType = 'MeanGamma';
 
     res = sqrt(size(stimulus,2)/8);
 
     % Load model fit:
-    load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','mean_gamma',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
             'cross_MeanPred')
 
-    % Load ecog data:
-    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
-        'ses-01','derivatives','ieeg',...
-        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+    % Load ecog stimulus data:
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+        ['sub-' subj '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
     % Gamma power percent signal change:
@@ -180,19 +156,16 @@ for ll = 1:length(electrodes)
     elec = electrodes(ll);
 
     analysisType = 'spectra200';
-    modelType = 'MeanPred';
-
-    res = sqrt(size(stimulus,2)/8);
+    modelType = 'meanGamma';
 
     % Load model fit:
-    load(fullfile(dataDir,'derivatives','gaborFilt','deriveOV',...
+    load(fullfile(dataDir,'derivatives','gaborFilt','mean_gamma',...
             ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
             'cross_MeanPred')
 
-    % Load ecog data:
-    dataFitName = fullfile(dataDir,['sub-' int2str(subj)],...
-        'ses-01','derivatives','ieeg',...
-        ['sub-' int2str(subj) '_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
+    % Load ecog stimulus data:
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+        ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
     % Gamma power percent signal change:

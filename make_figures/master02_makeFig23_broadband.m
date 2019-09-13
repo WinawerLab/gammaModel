@@ -9,7 +9,6 @@
 % Cascade Model of BOLD Responses in Human Visual Cortex. PLoS Comput Biol
 % 9(5): e1003079. https://doi.org/10.1371/journal.pcbi.1003079
 %
-%
 % Dora Hermes, 2017
 
 clear all
@@ -73,6 +72,7 @@ ecog_bb_err_all = zeros(length(electrodes),2,86);
 ecog_bb_base = zeros(length(electrodes),1);
 ecog_bb_err_base = zeros(length(electrodes),2,1);
 zstat = zeros(length(electrodes),86);
+ci_base = zeros(length(electrodes),1);
 
 % Get average broadband across all electrodes/subjects:
 for ll = 1:length(electrodes)
@@ -90,14 +90,12 @@ for ll = 1:length(electrodes)
         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
         'seeds','cross_SOCparams','cross_SOCestimate')
 
-    % load ecog stimulus data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',...
-        ['sub-' int2str(subj)],'ses-01','ieeg',...
+    % load ecog stimulus data (1000 bootstraps):
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
-    
-    % Load ecog baseline data:
-    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    % Load ecog baseline data (1000 bootstraps):
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
     load(dataBaseFitName)
 
@@ -116,7 +114,9 @@ for ll = 1:length(electrodes)
     % run bootstrap test:
     ecog_bb_100 = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
     ecog_bb_base_100 = 100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1);
-    zstat(ll,:) = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100);
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100,'bootstat');
+    zstat(ll,:) = zz; clear zz
+    ci_base(ll) = upbase_ci; clear upbase_ci
     
     % get mean model parameters and plot prediction
     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
@@ -206,9 +206,11 @@ for ll = 1:length(example_els)
 %     plot([1 86],[ecog_bb_err_base(example_els(ll),1) ecog_bb_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_bb_err_base(example_els(ll),2) ecog_bb_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
 
-    % plot statistic > 2.5   
-    plot(find(abs(zstat(example_els(ll),:))>2.5),0,'b.','MarkerSize',10)
-
+    % plot bootstrap 68% non-overlapping
+    if ~isempty(find(zstat(example_els(ll),:)>0,1))
+        plot(find(zstat(example_els(ll),:)>0),0,'b.','MarkerSize',10)
+    end
+    
     % set ylim
     ylims = [min(min(ecog_bb_err_all(example_els(ll),:,:))) max(max(ecog_bb_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
@@ -265,16 +267,14 @@ for ll = 1:length(electrodes)
         'seeds','cross_SOCparams','cross_SOCestimate')
 
     % load ecog data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',...
-        ['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
     % Load ecog baseline data:
-    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
     load(dataBaseFitName)
-
     
     % get ecog power percent signal change
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
@@ -293,10 +293,15 @@ for ll = 1:length(electrodes)
     plot([1:86; 1:86],ecog_bb_err,'k');
     plot(cross_SOCestimate' ,'r','LineWidth',2)
     
-    % plot baseline esimates:
-    plot([1 86],[ecog_bb_base ecog_bb_base],'-','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_bb_err_base(1) ecog_bb_err_base(1)],':','Color',[.5 .5 .5]);
-    plot([1 86],[ecog_bb_err_base(2) ecog_bb_err_base(2)],':','Color',[.5 .5 .5]);
+%     % plot baseline estimates:
+%     plot([1 86],[ecog_bb_base ecog_bb_base],'-','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_bb_err_base(1) ecog_bb_err_base(1)],':','Color',[.5 .5 .5]);
+%     plot([1 86],[ecog_bb_err_base(2) ecog_bb_err_base(2)],':','Color',[.5 .5 .5]);
+    
+    % plot bootstrap 68% non-overlapping
+    if ~isempty(find(zstat(ll,:)>0,1))
+        plot(find(zstat(ll,:)>0),0,'b.','MarkerSize',10)
+    end
     
     % set ylim
     ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
@@ -322,11 +327,11 @@ for ll = 1:length(electrodes)
 
     if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
         % save the figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
 
         % and make a new figure
         figure_nr = figure_nr +1;
@@ -336,11 +341,11 @@ for ll = 1:length(electrodes)
         
     elseif ll==length(electrodes)% save figure after last electrode
         % save the last figure
-        set(gcf,'PaperPositionMode','auto')
-        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
-        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+%         set(gcf,'PaperPositionMode','auto')
+%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
     end
 end
 
