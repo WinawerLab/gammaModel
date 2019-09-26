@@ -19,7 +19,7 @@ dataDir = gammaModelDataPath;
 subjects                = [ 19  19  19  19  19  19 24 24 1001 1001 1001 1001 1001 1001 1001];
 electrodes_allsubjects  = [107 108 109 115 120 121 45 46   49   50   52   57   58   59   60];
 
-analysisType = 'spectra200';
+analysisType = 'spectra200_Win200';
 
 
 hpc_job_number = str2num(getenv('SLURM_ARRAY_TASK_ID'));
@@ -99,7 +99,7 @@ clear resamp_parms spectra
 %     [45 46], ... % S2
 %     [49 50 52 57 58 59 60]}; % S3
 
-analysisType = 'spectra200';
+analysisType = 'spectra200_Win200';
 
 
 % load data
