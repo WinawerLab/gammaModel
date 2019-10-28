@@ -70,6 +70,10 @@ electrodes = [107 108 109 115 120 121 ... % S1
 % SOCestimate_all = zeros(length(electrodes),86);
 ecog_bb_all = zeros(length(electrodes),86);
 ecog_bb_err_all = zeros(length(electrodes),2,86);
+ecog_bb_base = zeros(length(electrodes),1);
+ecog_bb_err_base = zeros(length(electrodes),2,1);
+pboot = zeros(length(electrodes),86);
+ci_base = zeros(length(electrodes),1);
 
 % Get average broadband across all electrodes/subjects:
 for ll = 1:length(electrodes)
@@ -87,11 +91,14 @@ for ll = 1:length(electrodes)
 %         ['sub' int2str(subj) '_el' int2str(elec) '_' analysisType '_' modelType]),...
 %         'seeds','cross_SOCparams','cross_SOCestimate')
 
-    % load ecog data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',...
-        ['sub-' int2str(subj)],'ses-01','ieeg',...
+    % load ecog stimulus data (1000 bootstraps):
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
+    % Load ecog baseline data (1000 bootstraps):
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+        ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
+    load(dataBaseFitName)
 
     % get ecog power percent signal change
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
@@ -100,6 +107,17 @@ for ll = 1:length(electrodes)
         squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);   
     ecog_bb_all(ll,:) = ecog_bb;
     ecog_bb_err_all(ll,:,:) = ecog_bb_err;
+        
+    ecog_bb_base(ll) = mean(100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1),2);
+    ecog_bb_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,2),.16,2)) ...
+        squeeze(quantile(resamp_parms_baseline(:,:,2),.84,2))]'-bb_base)-1);   
+    
+    % run bootstrap test:
+    ecog_bb_100 = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
+    ecog_bb_base_100 = 100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1);
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100,'bootdiff');
+    pboot(ll,:) = zz; clear zz
+    ci_base(ll) = upbase_ci; clear upbase_ci
     
 %     % get mean model parameters and plot prediction
 %     cross_SOCparams(cross_SOCparams(:,6)<0,6) = 0; % restrictrange at 0
@@ -120,6 +138,7 @@ end
 
 %%
 %%
+%% Figure 2E mean broadband across electrodes
 
 ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
 
@@ -145,11 +164,12 @@ ylim([min(bb_group_low)-10 max(bb_group_up)+10])
 % save Figure 3a
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3a_' modelType '_Win200']))
+        ['Figure2E_' modelType '_Win200']))
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure3a_' modelType '_Win200']))     
+        ['Figure2E_' modelType '_Win200']))     
 
-% Plot example electrodes (Figure 4)
+%%
+%% Plot example electrodes (Figure 3)
 example_els = [3 5 7 8 9 14];
 
 figure('Position',[0 0 470 600])
@@ -161,6 +181,12 @@ for ll = 1:length(example_els)
     bar(ecog_bb_all(example_els(ll),:),1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],squeeze(ecog_bb_err_all(example_els(ll),:,:)),'k');
 %     plot(SOCestimate_all(example_els(ll),:)','r','LineWidth',2)
+
+    % plot bootstrap diff test
+    if ~isempty(find(pboot(example_els(ll),:)<.05,1))
+        plot(find(pboot(example_els(ll),:)<.05),0,'b.','MarkerSize',10)
+    end
+
     % set ylim
     ylims = [min(min(ecog_bb_err_all(example_els(ll),:,:))) max(max(ecog_bb_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
@@ -175,12 +201,12 @@ for ll = 1:length(example_els)
 
 end
 
-% save Figure 4
+% save Figure 3
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure4_' modelType '_Win200']))
+        ['Figure3_' modelType '_Win200']))
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure4_' modelType '_Win200']))
+        ['Figure3_' modelType '_Win200']))
 
 
 %% Figures S6-7: all electrodes all subjects
@@ -216,22 +242,36 @@ for ll = 1:length(electrodes)
 %         'seeds','cross_SOCparams','cross_SOCestimate')
 
     % load ecog data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',...
-        ['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
 
+    % Load ecog baseline data:
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+        ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
+    load(dataBaseFitName)
+    
     % get ecog power percent signal change
     bb_base = resamp_parms(1,1,6); % from the baseline is the same for resamp_parms(:,:,6)
     ecog_bb = mean(100*(10.^(resamp_parms(:,:,2)-bb_base)-1),2);
     ecog_bb_err = 100*(10.^([squeeze(quantile(resamp_parms(:,:,2),.16,2)) ...
         squeeze(quantile(resamp_parms(:,:,2),.84,2))]'-bb_base)-1);
     
+    ecog_bb_base = mean(100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1),2);
+    ecog_bb_err_base = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,2),.16,2)) ...
+        squeeze(quantile(resamp_parms_baseline(:,:,2),.84,2))]'-bb_base)-1);   
+    
     %%% PLOT BROADBAND POWER AND SOC FIT
     subplot(8,1,plot_nr),hold on
     bar(ecog_bb,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_bb_err,'k');
 %     plot(cross_SOCestimate' ,'r','LineWidth',2)
+
+    % plot bootstrap diff test p<0.05
+    if ~isempty(find(pboot(ll,:)<.05,1))
+        plot(find(pboot(ll,:)<.05),0,'b.','MarkerSize',10)
+    end
+
     % set ylim
     ylims = [min(ecog_bb_err(:)) max(ecog_bb_err(:))];
     ylim(ylims(1,:))

@@ -71,7 +71,7 @@ ecog_bb_all = zeros(length(electrodes),86);
 ecog_bb_err_all = zeros(length(electrodes),2,86);
 ecog_bb_base = zeros(length(electrodes),1);
 ecog_bb_err_base = zeros(length(electrodes),2,1);
-zstat = zeros(length(electrodes),86);
+pboot = zeros(length(electrodes),86);
 ci_base = zeros(length(electrodes),1);
 
 % Get average broadband across all electrodes/subjects:
@@ -114,8 +114,8 @@ for ll = 1:length(electrodes)
     % run bootstrap test:
     ecog_bb_100 = 100*(10.^(resamp_parms(:,:,2)-bb_base)-1);
     ecog_bb_base_100 = 100*(10.^(resamp_parms_baseline(:,:,2)-bb_base)-1);
-    [zz,upbase_ci] = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100,'bootstat');
-    zstat(ll,:) = zz; clear zz
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_bb_100,ecog_bb_base_100,'bootdiff');
+    pboot(ll,:) = zz; clear zz
     ci_base(ll) = upbase_ci; clear upbase_ci
     
     % get mean model parameters and plot prediction
@@ -206,9 +206,9 @@ for ll = 1:length(example_els)
 %     plot([1 86],[ecog_bb_err_base(example_els(ll),1) ecog_bb_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_bb_err_base(example_els(ll),2) ecog_bb_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
 
-    % plot bootstrap 68% non-overlapping
-    if ~isempty(find(zstat(example_els(ll),:)>0,1))
-        plot(find(zstat(example_els(ll),:)>0),0,'b.','MarkerSize',10)
+    % plot bootstrap p<0.05
+    if ~isempty(find(pboot(example_els(ll),:)<0.05,1))
+        plot(find(pboot(example_els(ll),:)<0.05),0,'b.','MarkerSize',10)
     end
     
     % set ylim
@@ -298,9 +298,9 @@ for ll = 1:length(electrodes)
 %     plot([1 86],[ecog_bb_err_base(1) ecog_bb_err_base(1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_bb_err_base(2) ecog_bb_err_base(2)],':','Color',[.5 .5 .5]);
     
-    % plot bootstrap 68% non-overlapping
-    if ~isempty(find(zstat(ll,:)>0,1))
-        plot(find(zstat(ll,:)>0),0,'b.','MarkerSize',10)
+    % plot bootstrap p<0.05
+    if ~isempty(find(pboot(ll,:)<0.05,1))
+        plot(find(pboot(ll,:)<0.05),0,'b.','MarkerSize',10)
     end
     
     % set ylim
@@ -327,11 +327,11 @@ for ll = 1:length(electrodes)
 
     if mod(ll,8)==0 && ll<length(electrodes)% save figure and make a new one every 8 electrodes
         % save the figure
-%         set(gcf,'PaperPositionMode','auto')
-%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
-%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS6_elset' int2str(figure_nr) '_' modelType]))
 
         % and make a new figure
         figure_nr = figure_nr +1;
@@ -341,11 +341,11 @@ for ll = 1:length(electrodes)
         
     elseif ll==length(electrodes)% save figure after last electrode
         % save the last figure
-%         set(gcf,'PaperPositionMode','auto')
-%         print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
-%         print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-%                 ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+        set(gcf,'PaperPositionMode','auto')
+        print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
+        print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
+                ['FigureS7_elset' int2str(figure_nr) '_' modelType]))
     end
 end
 

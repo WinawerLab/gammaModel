@@ -55,7 +55,7 @@ ecog_g_all = zeros(length(electrodes),86);
 ecog_g_err_all = zeros(length(electrodes),2,86);
 ecog_g_base = zeros(length(electrodes),1);
 ecog_g_err_base = zeros(length(electrodes),2,1);
-zstat = zeros(length(electrodes),86);
+pboot = zeros(length(electrodes),86);
 ci_base = zeros(length(electrodes),1);
 
 for ll = 1:length(electrodes)
@@ -99,8 +99,9 @@ for ll = 1:length(electrodes)
     % run bootstrap test:
     ecog_g_100 = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1);
     ecog_g_base_100 = 100*(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1);
-    [zz,upbase_ci] = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100,'bootstat');
-    zstat(ll,:) = zz; clear zz
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100,'bootdiff');
+
+    pboot(ll,:) = zz; clear zz
     ci_base(ll) = upbase_ci; clear upbase_ci
     
     % model performance (no mean subtracted)
@@ -127,9 +128,9 @@ g_base_mean = mean(ecog_g_base,1);
 g_base_err = std(ecog_g_base,1)./sqrt(size(ecog_g_base,1));
 g_base_up = mean(ecog_g_base,1)+g_base_err;
 g_base_low = mean(ecog_g_base,1)-g_base_err;
-plot([1 86],[g_base_mean; g_base_mean],'-','Color',[.5 .5 .5]);
-plot([1 86],[g_base_up; g_base_up],':','Color',[.5 .5 .5]);
-plot([1 86],[g_base_low; g_base_low],':','Color',[.5 .5 .5]);
+% plot([1 86],[g_base_mean; g_base_mean],'-','Color',[.5 .5 .5]);
+% plot([1 86],[g_base_up; g_base_up],':','Color',[.5 .5 .5]);
+% plot([1 86],[g_base_low; g_base_low],':','Color',[.5 .5 .5]);
 
 ylims = [min(g_group_low(:)) max(g_group_up(:))];
 
@@ -210,9 +211,9 @@ for ll = 1:length(example_els)
 %     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
     
-    % plot bootstrap 68% non-overlapping
-    if ~isempty(find(zstat(example_els(ll),:)>0,1))
-        plot(find(zstat(example_els(ll),:)>0),0,'b.','MarkerSize',10)
+    % plot bootstrap diff test
+    if ~isempty(find(pboot(example_els(ll),:)<.05,1))
+        plot(find(pboot(example_els(ll),:)<.05),0,'b.','MarkerSize',10)
     end
 
     % set ylim
@@ -300,12 +301,12 @@ for ll = 1:length(electrodes)
 %     plot([1 86],[ecog_g_base ecog_g_base],'-','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_g_err_base(1) ecog_g_err_base(1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_g_err_base(2) ecog_g_err_base(2)],':','Color',[.5 .5 .5]);
-    
-    % plot bootstrap 68% non-overlapping
-    if ~isempty(find(zstat(ll,:)>0,1))
-        plot(find(zstat(ll,:)>0),0,'b.','MarkerSize',10)
+
+    % plot bootstrap diff test
+    if ~isempty(find(pboot(ll,:)<.05,1))
+        plot(find(pboot(ll,:)<.05),0,'b.','MarkerSize',10)
     end
-    
+
     %%%%% Add model performance in label
     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
     ylabel(['el' int2str(elec) ' R^2=' int2str(r2)])

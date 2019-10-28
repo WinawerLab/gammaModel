@@ -36,9 +36,9 @@ nrOrientations = 8;
 res = sqrt(size(stimulus,2)/nrOrientations);  % resolution of the pre-processed stimuli
 
 %%
-%% Make Figure 3 and 7: 
-% Figure 3: gamma average across subjects 
-% Figure 7: gamma/OV model in 6 example electrodes 
+%% Get data for figure 2-6: average across subjects (Fig2) + example electrodes (Fig6).
+% Figure 2: gamma average across subjects 
+% Figure 6: gamma/OV model in 6 example electrodes 
 
 %%%%% Subjects/electrodes:
 subject_ind = [19 19 19 19 19 19  ... % S1
@@ -56,6 +56,8 @@ ecog_g_all = zeros(length(electrodes),86);
 ecog_g_err_all = zeros(length(electrodes),2,86);
 ecog_g_base = zeros(length(electrodes),1);
 ecog_g_err_base = zeros(length(electrodes),2,1);
+pboot = zeros(length(electrodes),86);
+ci_base = zeros(length(electrodes),1);
 
 for ll = 1:length(electrodes)
     
@@ -76,13 +78,13 @@ for ll = 1:length(electrodes)
 %     OVestimate_all(ll,:) = cross_OVestimate(:,:,ov_exponents==.5);
     
     % Load ecog stimulus data:
-    dataFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
+    dataFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitEl' int2str(elec) '.mat']);
     load(dataFitName)
-%     % Load ecog baseline data:
-%     dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing',['sub-' int2str(subj)],'ses-01','ieeg',...
-%         ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
-%     load(dataBaseFitName)
+    % Load ecog baseline data:
+    dataBaseFitName = fullfile(dataDir,'derivatives','preprocessing','1000bs',...
+        ['sub-' int2str(subj) '_ses-01_task-soc_allruns_' analysisType '_fitBaseEl' int2str(elec) '.mat']);
+    load(dataBaseFitName)
 
     % Gamma power percent signal change:
     ecog_g = 100*(mean(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1,2));
@@ -91,13 +93,17 @@ for ll = 1:length(electrodes)
     ecog_g_all(ll,:) = ecog_g;
     ecog_g_err_all(ll,:,:) = ecog_g_err;
     
-%     ecog_g_base(ll) = 100*(mean(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1,2));
-%     ecog_g_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
-%         squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
+    ecog_g_base(ll) = 100*(mean(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1,2));
+    ecog_g_err_base(ll,:) = 100*(10.^([squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.16,2)) ...
+        squeeze(quantile(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5),.84,2))]')-1);
 
-%     % model performance (no mean subtracted)
-%     r2 = calccod(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),ecog_g,[],0,0);
-%     OV_COD_all(ll) = r2;
+    % run bootstrap test:
+    ecog_g_100 = 100*(10.^(resamp_parms(:,:,3)./resamp_parms(:,:,5))-1);
+    ecog_g_base_100 = 100*(10.^(resamp_parms_baseline(:,:,3)./resamp_parms_baseline(:,:,5))-1);
+    [zz,upbase_ci] = ecog_bootstrapStat(ecog_g_100,ecog_g_base_100,'bootdiff');
+
+    pboot(ll,:) = zz; clear zz
+    ci_base(ll) = upbase_ci; clear upbase_ci
 end 
 
 % disp(['mean OV model performance: COD = ' int2str(mean(OV_COD_all))])
@@ -182,6 +188,11 @@ for ll = 1:length(example_els)
 %     plot([1 86],[ecog_g_err_base(example_els(ll),1) ecog_g_err_base(example_els(ll),1)],':','Color',[.5 .5 .5]);
 %     plot([1 86],[ecog_g_err_base(example_els(ll),2) ecog_g_err_base(example_els(ll),2)],':','Color',[.5 .5 .5]);
     
+    % plot bootstrap diff test
+    if ~isempty(find(pboot(example_els(ll),:)<.05,1))
+        plot(find(pboot(example_els(ll),:)<.05),0,'b.','MarkerSize',10)
+    end
+
     % set ylim
     ylims = [min(min(ecog_g_err_all(example_els(ll),:,:))) max(max(ecog_g_err_all(example_els(ll),:,:)))];
     ylim(ylims(1,:))
@@ -195,12 +206,12 @@ for ll = 1:length(example_els)
 %     ylabel(['el' int2str(elec) ' R^2=' int2str(OV_COD_all(example_els(ll),1))])
 end
 
-% save Figure 7
+% save Figure 6
 set(gcf,'PaperPositionMode','auto')
 print('-depsc','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure7_' modelType '_Win200']))
+        ['Figure6_' modelType '_Win200']))
 print('-dpng','-r300','-painters',fullfile(dataDir,'derivatives','figures',...
-        ['Figure7_' modelType '_Win200']))
+        ['Figure6_' modelType '_Win200']))
 
 %%
 
@@ -249,7 +260,13 @@ for ll = 1:length(electrodes)
     subplot(8,1,plot_nr),hold on   
     bar(ecog_g,1,'FaceColor',[.9 .9 .9],'EdgeColor',[0 0 0]);
     plot([1:86; 1:86],ecog_g_err,'k');
-    % Add gamma estimate (cross validated):
+    
+    % plot bootstrap diff test p<0.05
+    if ~isempty(find(pboot(ll,:)<.05,1))
+        plot(find(pboot(ll,:)<.05),0,'b.','MarkerSize',10)
+    end
+
+    % Add OV estimate (cross validated):
 %     plot(squeeze(cross_OVestimate(:,:,ov_exponents==.5)),'r','LineWidth',2)
     % Plot stimulus cutoffs:
     stim_change = [38.5 46.5 50.5 54.5 58.5 68.5 73.5 78.5 82.5];

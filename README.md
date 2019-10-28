@@ -1,5 +1,5 @@
 # gammaModel
-This repository contains functions and scripts to generate the results and figures from:
+This repository contains functions and scripts that were used in developing the OV model and generate the results and figures from:
 Hermes, Petridou, Kay and Winawer, 2019. If you use this code as a part of any publications, please please cite this work:
 Hermes D, Petridou N, Kay K, Winawer J. 2019 An image-computable model
 for the stimulus selectivity of gamma oscillations. bioRxiv doi:
