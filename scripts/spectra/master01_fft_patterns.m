@@ -2,7 +2,7 @@ clear all
 
 addpath('~/Documents/git/ecogBasicCode/')
 addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
-addpath(genpath('/Users/dorahermes-miller/Documents/m-files/knkutils'));
+addpath(genpath('~/Documents/m-files/knkutils'));
 
 %% epoch 
 % NOTE: later add exclusion bad epochs
@@ -150,9 +150,9 @@ end
 %% load all data together
 %%
 clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
+dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids_sourcedir';
 subjects = [19,23,24,1001];
-s = 4;
+s = 3;
 
 % analysisType = 'spectra';
 % analysisType = 'spectra500';

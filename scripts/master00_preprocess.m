@@ -12,11 +12,11 @@ addpath(['/Volumes/DoraBigDrive/data/visual_soc/m-files']);
 %% task-soc downsample and CAR
 
 clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
+dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids_sourcedir';
 
 subjects = [19,23,24];
 
-for s = 2%:length(subjects)
+for s = 1%:length(subjects)
     % subject name
     subj = subjects(s);
     dataName = dir([dataRootPath '/sub-' int2str(subj) '/ses-01/ieeg/sub-' int2str(subj) '_ses-01_task-soc_run-*_ieeg.mat']);
@@ -74,7 +74,7 @@ for s = 2%:length(subjects)
         
         % rereference
         disp(['CAR'])
-        [data] = ecog_CarRegress(data,include_channels);
+        [data] = ecog_CarRegress(data',include_channels);
         
         % resample / cut down to 1000 Hz
         s = srate*(1000/1031)*(1000/1480); % check that it's appropriate    

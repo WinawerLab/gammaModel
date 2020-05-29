@@ -4,12 +4,13 @@
 
 % set paths:
 gammaModelCodePath;
-dataDir = gammaModelDataPath;
+% dataDir = gammaModelDataPath;
+dataDir = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids_sourcedir';
 
 % add other toolboxes:
-addpath(genpath('/Users/dora/Documents/git/ecogBasicCode/'));
-addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
-addpath(genpath('/Users/dora/Documents/m-files/Chronux/'))
+addpath(genpath('/Users/m206305/Documents/git/ecogBasicCode/'));
+addpath(genpath('/Users/m206305/Documents/git/knkutils'));
+addpath(genpath('/Users/m206305/Documents/git/Chronux/'))
 
 %% load data and epoch
 
@@ -84,10 +85,10 @@ data_epoch = data_epoch_all;
 %%
 
 % electrodes = [49 50 52 57 58 59 60]; % S1001 V1, V2, V3
-elec = 50; 
+elec = 52; 
 
 conds_plot = {[45],[83],87};
-% conds_plot = {39,40,41,42,43,44,45,46,87}; % orientation
+conds_plot = {[10 29],39,40,41,42,43,44,45,46,87}; % orientation
 
 cm1 = [repmat([0 0 0],100,1)];
 cm1(1:40,1) = [0.7]';
@@ -120,7 +121,8 @@ params.trialave = 1;
 S1b = mean(S1b,1);
 
 params.trialave = 0;
-figure('Color',[1 1 1],'Position',[0 0 350 250])
+% figure('Color',[1 1 1],'Position',[0 0 350 250])
+figure('Color',[1 1 1],'Position',[0 0 1200 250])
 %%%%% all responses:
 for kk = 1:length(conds_plot)
     data2use = squeeze(data_temp(ismember(stim_all,conds_plot{kk}),:))';
@@ -148,3 +150,10 @@ colorbar
 % print('-depsc','-r300',fullfile(dataDir,'derivatives','spectra','timefreq',...
 %     ['ersp_sub-' subj '_el' int2str(elec) '_stim' int2str(conds_plot{1})]))
 
+%% check ERP
+
+elec = 52; 
+data_temp = squeeze(data_epoch(elec,:,:));
+
+hold on,
+plot(t,data_temp(find(stim_all==45,1),:))

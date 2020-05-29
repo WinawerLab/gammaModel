@@ -9,8 +9,8 @@ gammaModelCodePath;
 dataDir = gammaModelDataPath;
 
 % add other toolboxes:
-addpath('/Users/dora/Documents/git/ecogBasicCode/render/')
-addpath(genpath('/Users/dora/Documents/m-files/knkutils'));
+addpath('/Users/m206305/Documents/git/ecogBasicCode/render/')
+addpath(genpath('/Users/m206305/Documents/git/knkutils'));
 
 %% Write gifti in the space of the original MRI:
 
@@ -191,8 +191,9 @@ for s = 1%1:length(subjects)
         v_d = v_dirs(k,:);
         
         % make sure electrodes pop out
-        a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-        els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
+%         a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
+%         els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
+        els = elecmatrix;
 
         figure
         ecog_RenderGiftiLabels(g,vert_label,cmap,Wang_ROI_Names)
@@ -210,13 +211,13 @@ end
 %% Render Benson Areas with electrodes
 
 clear all
-dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids';
+dataRootPath = '/Volumes/DoraBigDrive/data/visual_soc/soc_bids_sourcedir';
 
 subjects = {'19','23','24','9','1001'};
 hemi = {'L','L','R','R','R'};
-hemi_s = {'l','l','r','r'};
+hemi_s = {'l','l','r','r','r'};
 
-v_dirs = [270 0;90 0;90 -60;270 -60;0 0];
+v_dirs = [270 0;90 0;90 -60;270 -60;0 0;0 -90;22 -20;-22 -20];
 
 Benson_Area_Names = {'V1','V2','V3','hV4','V01','V02','V3a','V3b','LO1','LO2','TO1','T02'};
 
@@ -244,29 +245,36 @@ for s = 1%1:length(subjects)
     vert_label = surface_labels.vol(:);
 
     % cmap = 'lines';
-    cmap = lines(max(vert_label));
-    
+%     cmap = lines(max(vert_label));
+    cmap = make_BensonColormap;
     
     % figure with rendering for different viewing angles
-    for k = 1%:size(v_dirs,1) % loop across viewing angles
+    for k = 1:size(v_dirs,1) % loop across viewing angles
         v_d = v_dirs(k,:);
         
         % make sure electrodes pop out
         a_offset = .1*max(abs(elecmatrix(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
         els = elecmatrix+repmat(a_offset,size(elecmatrix,1),1);
 
+%         els = elecmatrix;
+        
         figure
         ecog_RenderGiftiLabels(g,vert_label,cmap,Benson_Area_Names)
         
 %         ecog_RenderGifti(g) % render
         ecog_Label(els,30,12) % add electrode positions
         ecog_ViewLight(v_d(1),v_d(2)) % change viewing angle   
-%         set(gcf,'PaperPositionMode','auto')
-%         print('-dpng','-r300',['./figures/render/BensonAreas_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2))])
-%         close all
+        figureName = fullfile(dataRootPath,'derivatives','render',['sub-' subj],...
+            ['sub-' subj '_BensonAreas_subj_' subj '_v' int2str(v_d(1)) '_' int2str(v_d(2)) 'allLabels']);
+
+        set(gcf,'PaperPositionMode','auto')
+        print('-dpng','-r300',figureName)
+        close all
     end
 end
    
+
+
 %%
 %% Render Benson Eccentricity with electrodes
 
